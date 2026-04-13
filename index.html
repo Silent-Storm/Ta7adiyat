@@ -1,1 +1,404 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تحديات جواهر</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            touch-action: none;
+            user-select: none;
+            overflow: hidden;
+            background-color: #fdf2f8; /* Light pink */
+        }
+        .canvas-container {
+            position: relative;
+            height: calc(100vh - 120px);
+            width: 100%;
+        }
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .match-item {
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 20;
+            border: 3px solid transparent;
+        }
+        .match-item:active {
+            transform: scale(1.1);
+        }
+        .selected {
+            border-color: #ec4899 !important;
+            background-color: #fbcfe8 !important;
+        }
+        .correct {
+            border-color: #10b981 !important;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .missing-letter-btn {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 5px;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #fdf2f8 0%, #fae8ff 100%);
+        }
+        .jawahir-pink { background-color: #f472b6; }
+        .jawahir-purple { background-color: #a78bfa; }
+        .jawahir-yellow { background-color: #fbbf24; }
+    </style>
+</head>
+<body class="gradient-bg">
 
+    <!-- UI Overlays -->
+    <div id="main-menu" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-4">
+        <h1 class="text-4xl font-bold text-pink-600 mb-8">تحديات جواهر 💎</h1>
+        <div class="space-y-4 w-full max-w-xs">
+            <button onclick="startGame('letters')" class="w-full py-4 text-xl font-bold text-white jawahir-pink rounded-2xl shadow-lg border-b-4 border-pink-700">تحدي الحروف 🔠</button>
+            <button onclick="startGame('numbers')" class="w-full py-4 text-xl font-bold text-white jawahir-yellow rounded-2xl shadow-lg border-b-4 border-yellow-600">تحدي الأرقام 🔢</button>
+            <button onclick="startGame('fill')" class="w-full py-4 text-xl font-bold text-white jawahir-purple rounded-2xl shadow-lg border-b-4 border-purple-700">إكمال الكلمة ✍️</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden h-screen w-full flex flex-col">
+        <!-- Header -->
+        <div class="p-4 flex justify-between items-center bg-white shadow-sm">
+            <button onclick="showMenu()" class="text-2xl">🏠</button>
+            <div id="game-info" class="text-lg font-bold text-pink-600">
+                المستوى: <span id="current-level">1</span> | 
+                المحاولات: <span id="lives">❤️❤️❤️</span>
+            </div>
+            <div id="score" class="text-lg font-bold">💎 <span id="points">0</span></div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div id="canvas-area" class="canvas-container flex items-center justify-between px-6 overflow-hidden">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Items will be injected here -->
+            <div id="right-column" class="flex flex-col justify-around h-full"></div>
+            <div id="left-column" class="flex flex-col justify-around h-full"></div>
+            
+            <!-- Special Area for Fill in the Blank -->
+            <div id="fill-area" class="hidden absolute inset-0 flex flex-col items-center justify-center p-4">
+                <div id="fill-emoji" class="text-8xl mb-6"></div>
+                <div id="fill-word" class="text-6xl font-bold tracking-widest mb-10 text-pink-600"></div>
+                <div id="letters-grid" class="flex flex-wrap justify-center max-w-md"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal" class="hidden fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 text-center max-w-sm w-full">
+            <div id="modal-emoji" class="text-6xl mb-4">🎉</div>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4">أحسنتِ يا جواهر!</h2>
+            <p id="modal-msg" class="mb-6">لقد نجحتِ في هذا التحدي</p>
+            <button id="modal-btn" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold text-lg">التالي</button>
+        </div>
+    </div>
+
+    <script>
+        const dictionary = [
+            {w: "بسة", e: "🐱", l: "ب"}, {w: "كلب", e: "🐶", l: "ك"}, {w: "عصفور", e: "🐦", l: "ع"}, 
+            {w: "سمكة", e: "🐟", l: "س"}, {w: "أرنب", e: "🐰", l: "أ"}, {w: "دب", e: "🐻", l: "د"}, 
+            {w: "حصان", e: "🐴", l: "ح"}, {w: "دجاجة", e: "🐔", l: "د"}, {w: "فراشة", e: "🦋", l: "ف"}, 
+            {w: "نحلة", e: "🐝", l: "ن"}, {w: "شمس", e: "☀️", l: "ش"}, {w: "قمر", e: "🌙", l: "ق"}, 
+            {w: "نجمة", e: "⭐", l: "ن"}, {w: "غيمة", e: "☁️", l: "غ"}, {w: "مطر", e: "🌧️", l: "م"}, 
+            {w: "ثلج", e: "❄️", l: "ث"}, {w: "نار", e: "🔥", l: "ن"}, {w: "بحر", e: "🌊", l: "ب"}, 
+            {w: "وردة", e: "🌹", l: "و"}, {w: "شجرة", e: "🌳", l: "ش"}, {w: "تفاحة", e: "🍎", l: "ت"}, 
+            {w: "موزة", e: "🍌", l: "م"}, {w: "برتقالة", e: "🍊", l: "ب"}, {w: "عنب", e: "🍇", l: "ع"}, 
+            {w: "بطيخة", e: "🍉", l: "ب"}, {w: "تمر", e: "🌴", l: "ت"}, {w: "خبز", e: "🍞", l: "خ"}, 
+            {w: "حليب", e: "🥛", l: "ح"}, {w: "كاسة", e: "🥛", l: "ك"}, {w: "صحن", e: "🍽️", l: "ص"}, 
+            {w: "ملعقة", e: "🥄", l: "م"}, {w: "شوكة", e: "🍴", l: "ش"}, {w: "بيت", e: "🏠", l: "ب"}, 
+            {w: "باب", e: "🚪", l: "ب"}, {w: "شباك", e: "🪟", l: "ش"}, {w: "سرير", e: "🛏️", l: "س"}, 
+            {w: "مخدة", e: "🛌", l: "م"}, {w: "بطانية", e: "🛌", l: "ب"}, {w: "كرسي", e: "🪑", l: "ك"}, 
+            {w: "طاولة", e: "🪑", l: "ط"}, {w: "مدرسة", e: "🏫", l: "م"}, {w: "كتاب", e: "📚", l: "ك"}, 
+            {w: "قلم", e: "✏️", l: "ق"}, {w: "دفتر", e: "📓", l: "د"}, {w: "شنطة", e: "🎒", l: "ش"}, 
+            {w: "صورة", e: "🖼️", l: "ص"}, {w: "ساعة", e: "⌚", l: "س"}, {w: "تلفون", e: "📱", l: "ت"}, 
+            {w: "تلفزيون", e: "📺", l: "ت"}, {w: "كاميرا", e: "📷", l: "ك"}, {w: "سيارة", e: "🚗", l: "س"}, 
+            {w: "باص", e: "🚌", l: "ب"}, {w: "طيارة", e: "✈️", l: "ط"}, {w: "بسكليت", e: "🚲", l: "ب"}, 
+            {w: "قطار", e: "🚂", l: "ق"}, {w: "كورة", e: "⚽", l: "ك"}, {w: "لعبة", e: "🧸", l: "ل"}, 
+            {w: "دبدوب", e: "🧸", l: "د"}, {w: "فستان", e: "👗", l: "ف"}, {w: "كندرة", e: "👟", l: "ك"}, 
+            {w: "طاقية", e: "🧢", l: "ط"}, {w: "جاكيت", e: "🧥", l: "ج"}, {w: "بنطلون", e: "👖", l: "ب"}, 
+            {w: "قميص", e: "👕", l: "ق"}, {w: "جورب", e: "🧦", l: "ج"}, {w: "فرشاية", e: "🪥", l: "ف"}, 
+            {w: "مشط", e: "🪮", l: "م"}, {w: "صابونة", e: "🧼", l: "ص"}, {w: "بشكير", e: "🛀", l: "ب"}, 
+            {w: "مفتاح", e: "🔑", l: "م"}, {w: "هدية", e: "🎁", l: "ه"}, {w: "بالون", e: "🎈", l: "ب"}, 
+            {w: "كعكة", e: "🎂", l: "ك"}, {w: "شمعة", e: "🕯️", l: "ش"}, {w: "قلب", e: "❤️", l: "ق"}, 
+            {w: "وجه", e: "😊", l: "و"}, {w: "عين", e: "👁️", l: "ع"}, {w: "إيد", e: "✋", l: "إ"}, 
+            {w: "رجل", e: "🦶", l: "ر"}, {w: "أصبع", e: "☝️", l: "أ"}, {w: "ضحكة", e: "😄", l: "ض"}, 
+            {w: "زعل", e: "😢", l: "ز"}, {w: "نوم", e: "😴", l: "ن"}, {w: "أكل", e: "🍽️", l: "أ"}, 
+            {w: "شرب", e: "🥤", l: "ش"}, {w: "جري", e: "🏃", l: "ج"}, {w: "قفز", e: "🦘", l: "ق"}, 
+            {w: "غناء", e: "🎤", l: "غ"}, {w: "رسم", e: "🎨", l: "ر"}, {w: "لون", e: "🖍️", l: "ل"}, 
+            {w: "أحمر", e: "🔴", l: "أ"}, {w: "أزرق", e: "🔵", l: "أ"}, {w: "أخضر", e: "🟢", l: "أ"}, 
+            {w: "أصفر", e: "🟡", l: "أ"}, {w: "وردي", e: "💗", l: "و"}, {w: "بنفسجي", e: "💜", l: "ب"}
+        ];
+
+        let gameState = {
+            mode: '',
+            level: 1,
+            lives: 3,
+            points: 0,
+            currentSet: [],
+            selected: null,
+            matchesFound: 0,
+            isDrawing: false,
+            startX: 0, startY: 0,
+            usedWords: []
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 120;
+        }
+
+        function showMenu() {
+            document.getElementById('main-menu').classList.remove('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            gameState.usedWords = [];
+        }
+
+        function startGame(mode) {
+            gameState.mode = mode;
+            gameState.level = 1;
+            gameState.lives = 3;
+            gameState.points = 0;
+            gameState.usedWords = [];
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            initCanvas();
+            loadLevel();
+        }
+
+        function loadLevel() {
+            gameState.matchesFound = 0;
+            gameState.selected = null;
+            document.getElementById('current-level').innerText = gameState.level;
+            updateLivesUI();
+            
+            if (gameState.mode === 'fill') {
+                setupFillGame();
+            } else if (gameState.mode === 'letters') {
+                setupMatchingGame('letters');
+            } else {
+                setupMatchingGame('numbers');
+            }
+        }
+
+        function updateLivesUI() {
+            document.getElementById('lives').innerText = '❤️'.repeat(gameState.lives);
+            if (gameState.lives <= 0) {
+                gameOver();
+            }
+        }
+
+        function setupMatchingGame(type) {
+            document.getElementById('right-column').innerHTML = '';
+            document.getElementById('left-column').innerHTML = '';
+            document.getElementById('fill-area').classList.add('hidden');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            let set = [];
+            if (type === 'letters') {
+                // Get words that don't share the same starting letter in this set
+                let available = dictionary.filter(item => !gameState.usedWords.includes(item.w));
+                let startingLetters = new Set();
+                
+                while (set.length < 6 && available.length > 0) {
+                    let randIdx = Math.floor(Math.random() * available.length);
+                    let item = available[randIdx];
+                    if (!startingLetters.has(item.l)) {
+                        set.push(item);
+                        startingLetters.add(item.l);
+                        gameState.usedWords.push(item.w);
+                    }
+                    available.splice(randIdx, 1);
+                }
+            } else {
+                // Numbers 1 to 6
+                const icons = ["🍎", "⭐", "🎈", "🍭", "🧸", "⚽"];
+                for (let i = 1; i <= 6; i++) {
+                    set.push({ w: i.toString(), e: icons[i-1].repeat(i), id: i });
+                }
+            }
+
+            gameState.currentSet = set;
+            
+            const rightData = [...set].sort(() => Math.random() - 0.5);
+            const leftData = [...set].sort(() => Math.random() - 0.5);
+
+            rightData.forEach((item, idx) => {
+                const div = createItem(item, 'right', type);
+                document.getElementById('right-column').appendChild(div);
+            });
+
+            leftData.forEach((item, idx) => {
+                const div = createItem(item, 'left', type);
+                document.getElementById('left-column').appendChild(div);
+            });
+        }
+
+        function createItem(item, side, type) {
+            const div = document.createElement('div');
+            div.className = `match-item bg-white p-4 rounded-2xl shadow flex items-center justify-center text-3xl mb-2 w-28 h-20`;
+            div.dataset.id = item.w;
+            div.dataset.side = side;
+            
+            if (side === 'right') {
+                div.innerText = type === 'letters' ? item.l : item.w;
+            } else {
+                div.innerText = item.e;
+            }
+
+            div.addEventListener('click', (e) => handleSelect(e, div));
+            return div;
+        }
+
+        function handleSelect(e, el) {
+            if (el.classList.contains('correct')) return;
+
+            if (!gameState.selected) {
+                gameState.selected = el;
+                el.classList.add('selected');
+            } else {
+                if (gameState.selected.dataset.side === el.dataset.side) {
+                    gameState.selected.classList.remove('selected');
+                    gameState.selected = el;
+                    el.classList.add('selected');
+                } else {
+                    // Check match
+                    if (gameState.selected.dataset.id === el.dataset.id) {
+                        // Success
+                        el.classList.add('correct');
+                        gameState.selected.classList.add('correct');
+                        gameState.selected.classList.remove('selected');
+                        drawConnection(gameState.selected, el);
+                        gameState.selected = null;
+                        gameState.matchesFound++;
+                        
+                        if (gameState.matchesFound === 6) {
+                            setTimeout(() => winLevel(), 500);
+                        }
+                    } else {
+                        // Error
+                        gameState.lives--;
+                        updateLivesUI();
+                        gameState.selected.classList.remove('selected');
+                        gameState.selected = null;
+                        el.classList.add('bg-red-200');
+                        setTimeout(() => el.classList.remove('bg-red-200'), 500);
+                    }
+                }
+            }
+        }
+
+        function drawConnection(el1, el2) {
+            const rect1 = el1.getBoundingClientRect();
+            const rect2 = el2.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+
+            ctx.beginPath();
+            ctx.moveTo(rect1.left + rect1.width/2 - canvasRect.left, rect1.top + rect1.height/2 - canvasRect.top);
+            ctx.lineTo(rect2.left + rect2.width/2 - canvasRect.left, rect2.top + rect2.height/2 - canvasRect.top);
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        // Fill in the blanks logic
+        function setupFillGame() {
+            document.getElementById('right-column').innerHTML = '';
+            document.getElementById('left-column').innerHTML = '';
+            document.getElementById('fill-area').classList.remove('hidden');
+            
+            let item = dictionary[Math.floor(Math.random() * dictionary.length)];
+            const missingIdx = Math.floor(Math.random() * item.w.length);
+            const missingLetter = item.w[missingIdx];
+            const displayWord = item.w.split('').map((c, i) => i === missingIdx ? ' _ ' : c).join('');
+
+            document.getElementById('fill-emoji').innerText = item.e;
+            document.getElementById('fill-word').innerText = displayWord;
+
+            const grid = document.getElementById('letters-grid');
+            grid.innerHTML = '';
+
+            // Generate some random letters + the correct one
+            const alphabet = "أبتثجحخدذرزسشصضطظعغفقكلمنهوي";
+            let options = [missingLetter];
+            while (options.length < 8) {
+                let l = alphabet[Math.floor(Math.random() * alphabet.length)];
+                if (!options.includes(l)) options.push(l);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            options.forEach(l => {
+                const btn = document.createElement('button');
+                btn.className = "missing-letter-btn shadow-md active:bg-pink-200";
+                btn.innerText = l;
+                btn.onclick = () => {
+                    if (l === missingLetter) {
+                        document.getElementById('fill-word').innerText = item.w;
+                        setTimeout(() => winLevel(), 800);
+                    } else {
+                        gameState.lives--;
+                        updateLivesUI();
+                        btn.classList.add('bg-red-200');
+                    }
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function winLevel() {
+            gameState.level++;
+            const totalStages = (gameState.mode === 'fill') ? 16 : 5;
+            
+            if (gameState.level > totalStages) {
+                showModal("مبروك يا جواهر! 🎉", "لقد أنهيتِ كل التحديات بامتياز!", "البداية من جديد", () => startGame(gameState.mode));
+            } else {
+                showModal("أحسنتِ يا بطلة! ⭐", `انتهى المستوى ${gameState.level - 1} بنجاح`, "المستوى التالي", () => loadLevel());
+            }
+        }
+
+        function gameOver() {
+            showModal("حاولِ مرة أخرى 🌸", "لا بأس يا جواهر، أنتِ ذكية وستنجحين!", "إعادة التحدي", () => startGame(gameState.mode));
+        }
+
+        function showModal(title, msg, btnText, callback) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+            const btn = document.getElementById('modal-btn');
+            btn.innerText = btnText;
+            btn.onclick = () => {
+                modal.classList.add('hidden');
+                callback();
+            };
+            modal.classList.remove('hidden');
+        }
+
+        window.addEventListener('resize', initCanvas);
+    </script>
+</body>
+</html>
