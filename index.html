@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- إعدادات تطبيق الويب (PWA) للآيفون -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="تحديات جواهر">
-    <title>تحديات جواهر</title>
+    <meta name="apple-mobile-web-app-title" content="جواهر">
+    <meta name="description" content="تطبيق تفاعلي لتعليم اللغة العربية للأطفال عبر تحديات المطابقة، الإملاء، والترتيب باستخدام الرموز التعبيرية">
+    <title>جواهر</title>
     
     <link rel="apple-touch-icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f31f.png">
     <link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f31f.png">
@@ -15,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* إجبار الصفحة على عدم التمرير نهائياً */
+        /* إجبار الصفحة على عدم التمرير نهائياً والتثبيت المطلق للشاشة */
         html, body { 
             position: fixed;
             width: 100%;
@@ -24,7 +27,7 @@
             overflow: hidden; 
             overscroll-behavior: none; 
             touch-action: none; 
-            background-color: #fce7f3; 
+            background-color: #fce7f3; /* وردي بناتي فاتح */
             margin: 0; padding: 0;
             padding-top: env(safe-area-inset-top); 
             padding-bottom: env(safe-area-inset-bottom);
@@ -48,19 +51,20 @@
         .matched { transition: all 0.3s; opacity: 0.5; transform: scale(0.85); }
         /* تصغير النصوص ديناميكياً لتفادي الخروج عن الشاشة */
         .dynamic-text { font-size: clamp(1rem, 4vw, 2.5rem); }
-        .emoji-text { font-size: clamp(2rem, 8vw, 5rem); }
+        .emoji-text { font-size: clamp(2.5rem, 10vw, 6rem); }
     </style>
 </head>
 <body class="text-purple-900 no-select flex flex-col">
 
     <!-- شاشة البداية -->
     <div id="menu-screen" class="flex-1 flex flex-col items-center justify-center p-4 z-20 pop h-full w-full">
-        <div class="mb-2 text-center shrink-0">
-            <div class="text-5xl drop-shadow-xl mb-1 animate-bounce">🌟</div>
-            <h1 class="text-3xl sm:text-5xl font-black text-purple-700 drop-shadow-md">تحديات جواهر</h1>
+        <div class="mb-4 text-center shrink-0">
+            <div class="text-6xl drop-shadow-xl mb-2 animate-bounce">🌟</div>
+            <h1 class="text-4xl sm:text-6xl font-black text-purple-700 drop-shadow-md tracking-wide">جواهر</h1>
+            <p class="text-sm sm:text-lg text-purple-500 font-bold mt-2">تطبيق التعليم والمرح</p>
         </div>
         
-        <div class="w-full max-w-sm grid grid-cols-1 gap-3 flex-1 overflow-hidden place-content-center">
+        <div class="w-full max-w-sm grid grid-cols-1 gap-3 sm:gap-4 flex-1 overflow-hidden place-content-center">
             <button onclick="startGame(1)" class="w-full bg-pink-500 hover:bg-pink-600 text-white text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-3xl shadow-lg border-b-8 border-pink-700 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
                 <span>مد الحرف للصورة</span> <span>✏️</span>
             </button>
@@ -120,8 +124,8 @@
         </div>
     </div>
 
-    <!-- كانفاس مخفي لرسم صورة الشهادة للتحميل -->
-    <canvas id="cert-canvas" width="800" height="800" style="display:none;"></canvas>
+    <!-- كانفاس مخفي لرسم صورة الشهادة للتحميل (طفولية وبألوان جواهر المفظلة) -->
+    <canvas id="cert-canvas" width="800" height="1000" style="display:none;"></canvas>
 
     <script>
         const fullDict = [
@@ -163,15 +167,15 @@
         let state = {
             challenge: 0,
             level: 1,
-            stage: 1, // للمراحل داخل التحدي
+            stage: 1, 
             lives: 3,
             stars: parseInt(localStorage.getItem('jawaher_stars') || '0'),
             usedWords: [],
             matchesToWin: 0,
             currentMatches: 0,
             ttsUnlocked: false,
-            isShowingAnswer: false, // لمنع اللعب وقت إظهار الإجابة
-            chData: null // تخزين بيانات التحدي الحالي للإجابة
+            isShowingAnswer: false, 
+            chData: null 
         };
 
         document.getElementById('stars-count').innerText = state.stars;
@@ -180,7 +184,6 @@
             state.stars++;
             localStorage.setItem('jawaher_stars', state.stars);
             document.getElementById('stars-count').innerText = state.stars;
-            // أنيميشن للنجمة
             let el = document.getElementById('stars-count');
             el.classList.add('pop');
             setTimeout(() => el.classList.remove('pop'), 400);
@@ -211,7 +214,7 @@
         let canvas = document.getElementById('lines-canvas');
         let ctx = canvas.getContext('2d');
         let matchedPairs = []; 
-        let answerLines = []; // خطوط الإجابة الصحيحة
+        let answerLines = []; 
         let isDrawing = false;
         let startNode = null;
         let currentTouch = {x: 0, y: 0};
@@ -228,9 +231,9 @@
             ctx.lineCap = "round";
             let rect = document.getElementById('game-area').getBoundingClientRect();
 
-            // رسم خطوط الإجابة الصحيحة (لو خسر)
+            // رسم خطوط الإجابة الصحيحة
             if(state.isShowingAnswer && answerLines.length > 0) {
-                ctx.lineWidth = 8;
+                ctx.lineWidth = 10;
                 ctx.strokeStyle = "#4ade80"; // أخضر
                 answerLines.forEach(pair => {
                     let r1 = pair.el1.getBoundingClientRect();
@@ -273,7 +276,7 @@
 
         function startGame(ch) {
             initTTS();
-            speak('يلا نلعب'); 
+            speak('يلا نلعب يا جواهر'); 
             state.challenge = ch;
             state.level = 1;
             state.stage = 1;
@@ -291,7 +294,7 @@
 
         function updateHeader() {
             let lvlTxt = `مستوى ${state.level}`;
-            if(state.challenge === 3 || state.challenge === 4) lvlTxt = `مرحلة ${state.stage}`;
+            if(state.challenge === 3 || state.challenge === 4 || state.challenge === 5) lvlTxt = `مرحلة ${state.stage}`;
             document.getElementById('header-level').innerText = lvlTxt;
             
             const titles = ["", "مد الحرف للصورة", "مد الرقم للعدد", "تحدي الجمع", "اكمل الحرف الناقص", "ترتيب الحروف"];
@@ -331,7 +334,6 @@
             document.getElementById('overlay-title').innerText = title;
             document.getElementById('overlay-msg').innerText = msg;
             
-            // تجهيز بيانات الشهادة
             state.overlayData = { title: isWin ? "شهادة فوز بطلة!" : "شهادة محاولة شجاعة!", msg, isWin };
             
             let btn = document.getElementById('overlay-btn');
@@ -345,45 +347,67 @@
                     else if((state.challenge===4||state.challenge===5) && state.stage >= 16) showMenu();
                     else renderCurrentChallenge();
                 } else {
-                    renderCurrentChallenge(); // الخسارة تعيد التحدي بتشكيلة جديدة
+                    renderCurrentChallenge(); 
                 }
             };
             overlay.classList.remove('hidden');
         }
 
-        // حفظ الصورة (الشهادة)
+        // حفظ الصورة (شهادة جواهر المخصصة)
         async function shareImage() {
             const cvs = document.getElementById('cert-canvas');
             const c = cvs.getContext('2d');
             
-            // خلفية
-            c.fillStyle = state.overlayData.isWin ? '#fdf2f8' : '#fffbeb'; // وردي فاتح أو أصفر فاتح
-            c.fillRect(0, 0, 800, 800);
+            // خلفية طفولية
+            c.fillStyle = state.overlayData.isWin ? '#fce7f3' : '#fef3c7'; // وردي مفضل لجواهر أو أصفر فاتح
+            c.fillRect(0, 0, 800, 1000);
             
-            // إطار
+            // إطار خارجي والداخلي
             c.strokeStyle = state.overlayData.isWin ? '#ec4899' : '#eab308';
-            c.lineWidth = 20;
-            c.strokeRect(20, 20, 760, 760);
+            c.lineWidth = 25;
+            c.strokeRect(25, 25, 750, 950);
+            
+            c.strokeStyle = '#fff';
+            c.lineWidth = 10;
+            c.strokeRect(50, 50, 700, 900);
 
             // نصوص
             c.textAlign = 'center';
-            c.fillStyle = '#7e22ce'; // بنفسجي
-            c.font = 'bold 60px Cairo, sans-serif';
-            c.fillText('🌟 تحديات جواهر 🌟', 400, 150);
+            c.fillStyle = '#7e22ce'; 
+            c.font = 'bold 70px Cairo, sans-serif';
+            c.fillText('🌟 تطبيق جواهر 🌟', 400, 160);
 
-            c.font = 'bold 80px Cairo, sans-serif';
-            c.fillStyle = state.overlayData.isWin ? '#ec4899' : '#ca8a04';
-            c.fillText(state.overlayData.title, 400, 350);
+            c.font = 'bold 90px Cairo, sans-serif';
+            c.fillStyle = state.overlayData.isWin ? '#db2777' : '#ca8a04';
+            c.fillText(state.overlayData.title, 400, 380);
+
+            c.font = 'bold 55px Cairo, sans-serif';
+            c.fillStyle = '#374151';
+            
+            // ترتيب الرسالة إذا كانت طويلة
+            let words = state.overlayData.msg.split(' ');
+            let line = '';
+            let y = 520;
+            for(let i = 0; i < words.length; i++) {
+                let testLine = line + words[i] + ' ';
+                if(c.measureText(testLine).width > 600 && i > 0) {
+                    c.fillText(line, 400, y);
+                    line = words[i] + ' ';
+                    y += 70;
+                } else {
+                    line = testLine;
+                }
+            }
+            c.fillText(line, 400, y);
 
             c.font = 'bold 50px Cairo, sans-serif';
-            c.fillStyle = '#374151';
-            c.fillText(state.overlayData.msg, 400, 500);
-
-            c.font = 'bold 40px Cairo, sans-serif';
             c.fillStyle = '#eab308';
-            c.fillText('النجوم: ⭐ ' + state.stars, 400, 650);
+            c.fillText('إجمالي النجوم: ⭐ ' + state.stars, 400, y + 120);
 
-            // تحويل ومشاركة
+            // إضافة رسومات طفولية (أشياء جواهر المفضلة)
+            c.font = '60px Arial';
+            c.fillText('👱‍♀️ 🍍 💄 🥭 👗', 400, 900);
+
             try {
                 const dataUrl = cvs.toDataURL('image/png');
                 const blob = await (await fetch(dataUrl)).blob();
@@ -393,10 +417,9 @@
                     await navigator.share({
                         files: [file],
                         title: 'شهادة جواهر',
-                        text: 'شهادة من تطبيق تحديات جواهر!'
+                        text: 'شهادة بطلة من تطبيق جواهر!'
                     });
                 } else {
-                    // Fallback
                     const link = document.createElement('a');
                     link.download = 'jawaher_certificate.png';
                     link.href = dataUrl;
@@ -409,7 +432,7 @@
 
         function handleWrong() {
             if(state.isShowingAnswer) return;
-            speak('حاولي مرة أخرى');
+            speak('حاولي مرة ثانية يا بطلة');
             state.lives--;
             updateLivesDisplay();
             let area = document.getElementById('game-area');
@@ -423,14 +446,11 @@
 
         function showAnswerAndGameOver() {
             state.isShowingAnswer = true;
-            speak('شوفي الإجابة الصح يا بطلة');
+            speak('شوفي الإجابة الصح عشان نتعلم');
             
-            // إظهار الإجابة حسب التحدي
             if(state.challenge === 1 || state.challenge === 2) {
-                // رسم خطوط للخيارات المتبقية
                 let leftEls = document.querySelectorAll('.draggable:not(.matched)');
                 let type1 = state.challenge === 1 ? 'letter' : 'number';
-                
                 let list1 = Array.from(leftEls).filter(e => e.dataset.type === type1);
                 let list2 = Array.from(leftEls).filter(e => e.dataset.type !== type1);
                 
@@ -439,14 +459,12 @@
                     if(el2) answerLines.push({el1, el2});
                 });
             } else if (state.challenge === 3 || state.challenge === 4) {
-                // تضوي الزر الصح
                 let correctBtn = Array.from(document.querySelectorAll('.ans-btn')).find(b => b.dataset.correct === 'true');
                 if(correctBtn) {
                     correctBtn.classList.replace('bg-yellow-400', 'bg-green-400');
                     correctBtn.classList.add('animate-pulse');
                 }
             } else if (state.challenge === 5) {
-                // ترتيب الحروف الصح
                 let slots = document.querySelectorAll('.ch5-slot');
                 state.chData.letters.forEach((char, i) => {
                     if(slots[i]) slots[i].innerText = char;
@@ -454,21 +472,20 @@
                 });
             }
 
-            // بعد 3 ثواني نعرض شاشة الخسارة
+            // الانتظار 3.5 ثانية للتعلم
             setTimeout(() => {
                 state.lives = 3;
-                // ما بنصفر المرحلة، بس بنعيد تشكيلة الكلمات لنفس المرحلة
-                showOverlay('خلصوا المحاولات! 💔', 'تعلمنا الصح! يلا نعيد التحدي يا بطلة!', 'إعادة المحاولة', false);
+                showOverlay('خلصوا المحاولات! 💔', 'تعلمنا الصح! يلا نعيد التحدي يا أحلى جواهر!', 'إعادة المحاولة', false);
             }, 3500);
         }
 
         function winLevel() {
             addStar();
-            speak('ممتاز يا بطلة');
+            speak('ممتاز يا شطورة');
             
             if(state.challenge === 1 || state.challenge === 2) {
                 if(state.level >= 5) {
-                    showOverlay('مبروووك يا بطلة! 🎉', `يا عيني على الشطارة! خلصتي كل مستويات التحدي! جمعتي ${state.stars} نجمة!`, 'رجوع للقائمة', true);
+                    showOverlay('مبروووك يا بطلة! 🎉', `يا عيني على الشطارة! خلصتي كل المستويات! جمعتي ${state.stars} نجمة!`, 'رجوع للقائمة', true);
                 } else {
                     state.level++;
                     showOverlay('شطووورة! 🌟', 'بطلة يا جواهر! يلا للمستوى اللي بعده.', 'التالي', true);
@@ -481,7 +498,7 @@
                     } else {
                         state.level++;
                         state.stage = 1;
-                        showOverlay('يا عيني! 🌟', 'خلصنا المستوى، يلا نصعبها شوي!', 'التالي', true);
+                        showOverlay('يا عيني! 🌟', 'خلصنا المستوى الأول بالحساب، يلا نصعبها شوي!', 'التالي', true);
                     }
                 } else {
                     state.stage++;
@@ -584,7 +601,7 @@
                 }
             }
             if(selectedWords.length < 5) {
-                state.usedWords = []; // خلصوا الكلمات، تصفير والبدء
+                state.usedWords = []; // خلصوا، تصفير
                 renderChallenge1();
                 return;
             }
@@ -597,10 +614,10 @@
             let html = `
             <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2">
                 <div class="flex flex-col justify-evenly h-full w-[25%]">
-                    ${letters.map(l => `<div class="draggable bg-yellow-400 rounded-full w-full aspect-square flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-purple-900 mx-auto" data-type="letter" data-id="${l.id}">${l.content}</div>`).join('')}
+                    ${letters.map(l => `<div class="draggable bg-yellow-400 rounded-full w-full aspect-square flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-purple-900 mx-auto max-w-[70px]" data-type="letter" data-id="${l.id}">${l.content}</div>`).join('')}
                 </div>
                 <div class="flex flex-col justify-evenly h-full w-[30%] items-end">
-                    ${emojis.map(e => `<div class="draggable bg-white rounded-2xl w-full aspect-square flex items-center justify-center text-4xl sm:text-5xl shadow-lg border-4 border-pink-400 mx-auto" data-type="emoji" data-id="${e.id}">${e.content}</div>`).join('')}
+                    ${emojis.map(e => `<div class="draggable bg-white rounded-2xl w-full aspect-square flex items-center justify-center text-4xl sm:text-5xl shadow-lg border-4 border-pink-400 mx-auto max-w-[80px]" data-type="emoji" data-id="${e.id}">${e.content}</div>`).join('')}
                 </div>
             </div>`;
             document.getElementById('game-content').innerHTML = html;
@@ -620,7 +637,7 @@
             let numberData = numbers.map(n => ({ id: n, content: n }));
             let emojiData = numbers.map(n => {
                 let rEmoji = fullDict[Math.floor(Math.random() * fullDict.length)].e;
-                let repeated = Array(n).fill(`<span class="text-2xl">${rEmoji}</span>`).join('');
+                let repeated = Array(n).fill(`<span class="text-xl sm:text-2xl">${rEmoji}</span>`).join('');
                 return { id: n, content: `<div class="flex flex-wrap justify-center items-center gap-0.5 pointer-events-none">${repeated}</div>` };
             });
             shuffle(numberData); shuffle(emojiData);
@@ -628,10 +645,10 @@
             let html = `
             <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2">
                 <div class="flex flex-col justify-evenly h-full w-[25%]">
-                    ${numberData.map(n => `<div class="draggable bg-pink-400 rounded-full w-full aspect-square flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-white mx-auto" data-type="number" data-id="${n.id}">${n.content}</div>`).join('')}
+                    ${numberData.map(n => `<div class="draggable bg-pink-400 rounded-full w-full aspect-square flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-white mx-auto max-w-[70px]" data-type="number" data-id="${n.id}">${n.content}</div>`).join('')}
                 </div>
-                <div class="flex flex-col justify-evenly h-full w-[50%]">
-                    ${emojiData.map(e => `<div class="draggable bg-white rounded-2xl w-full p-2 min-h-[12vh] flex items-center justify-center shadow-lg border-4 border-yellow-400 mx-auto" data-type="emoji-count" data-id="${e.id}">${e.content}</div>`).join('')}
+                <div class="flex flex-col justify-evenly h-full w-[55%]">
+                    ${emojiData.map(e => `<div class="draggable bg-white rounded-2xl w-full p-2 min-h-[10vh] sm:min-h-[12vh] flex items-center justify-center shadow-lg border-4 border-yellow-400 mx-auto" data-type="emoji-count" data-id="${e.id}">${e.content}</div>`).join('')}
                 </div>
             </div>`;
             document.getElementById('game-content').innerHTML = html;
@@ -640,12 +657,11 @@
         }
 
         // ============================================
-        // 3: تحدي الجمع بالرموز (مستويات 1 لـ 3)
+        // 3: تحدي الجمع بالرموز (مستويات 1 لـ 3: كل مستوى 10 مراحل)
         // ============================================
         function renderChallenge3() {
             let maxTotal = state.level === 1 ? 6 : (state.level === 2 ? 8 : 10);
             
-            // اختيار رقمين عشوائيين مجموعهم لا يتجاوز maxTotal و لا يكون 0
             let a = Math.floor(Math.random() * (maxTotal - 1)) + 1;
             let b = Math.floor(Math.random() * (maxTotal - a)) + 1;
             let ans = a + b;
@@ -653,7 +669,6 @@
             let e1 = fullDict[Math.floor(Math.random() * fullDict.length)].e;
             let e2 = fullDict[Math.floor(Math.random() * fullDict.length)].e;
 
-            // خيارات الإجابة
             let options = [ans];
             while(options.length < 3) {
                 let r = Math.floor(Math.random() * maxTotal) + 1;
@@ -668,15 +683,15 @@
             <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-2">
                 <div class="flex flex-col items-center gap-2 sm:gap-4 bg-white p-4 rounded-3xl shadow border-4 border-purple-200 w-full max-w-sm">
                     <div class="dynamic-text flex flex-wrap justify-center items-center cursor-pointer" onclick="speak('${a}')">${str1} <span class="text-xs absolute opacity-0">${a}</span></div>
-                    <div class="text-4xl font-black text-purple-600">➕</div>
+                    <div class="text-4xl sm:text-5xl font-black text-purple-600">➕</div>
                     <div class="dynamic-text flex flex-wrap justify-center items-center cursor-pointer" onclick="speak('${b}')">${str2} <span class="text-xs absolute opacity-0">${b}</span></div>
                 </div>
                 
-                <div class="text-5xl font-black text-pink-500">= ؟</div>
+                <div class="text-4xl sm:text-5xl font-black text-pink-500">= ؟</div>
 
                 <div class="flex gap-4 w-full justify-center mt-2">
                     ${options.map(opt => `
-                        <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-4xl sm:text-5xl font-bold w-[20vw] max-w-[80px] aspect-square rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" data-correct="${opt === ans}" onclick="checkCh3Ans(this, ${opt === ans}, ${opt})">
+                        <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl sm:text-5xl font-bold w-[22vw] max-w-[85px] aspect-square rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" data-correct="${opt === ans}" onclick="checkCh3Ans(this, ${opt === ans}, ${opt})">
                             ${opt}
                         </button>
                     `).join('')}
@@ -724,11 +739,11 @@
             <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-4">
                 <div class="emoji-text drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${item.w}')">${item.e}</div>
                 
-                <div class="dynamic-text font-black tracking-widest text-white bg-purple-600 px-6 py-4 rounded-3xl shadow-xl border-4 border-yellow-400 w-full max-w-sm mx-auto">
+                <div class="dynamic-text font-black tracking-widest text-white bg-purple-600 px-4 sm:px-6 py-4 rounded-3xl shadow-xl border-4 border-yellow-400 w-full max-w-sm mx-auto">
                     ${displayWord.join('')}
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4 w-full max-w-xs mx-auto">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-xs mx-auto">
                     ${options.map(opt => `
                         <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl sm:text-5xl font-bold py-4 rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" data-correct="${opt === hiddenLetter}" onclick="checkCh4Ans(this, ${opt === hiddenLetter}, '${opt}')">
                             ${opt}
@@ -781,7 +796,7 @@
                 <div class="flex space-x-1 rtl:space-x-reverse justify-center w-full">
                     ${state.chData.letters.map((_, i) => {
                         let s = state.chData.selected[i];
-                        return `<div class="ch5-slot w-[15vw] max-w-[65px] aspect-square bg-purple-200 border-4 border-purple-500 rounded-xl flex items-center justify-center text-2xl sm:text-4xl font-bold text-purple-900 shadow-inner cursor-pointer" onclick="undoCh5Letter(${i})">
+                        return `<div class="ch5-slot w-[16vw] max-w-[65px] aspect-square bg-purple-200 border-4 border-purple-500 rounded-xl flex items-center justify-center text-3xl sm:text-4xl font-bold text-purple-900 shadow-inner cursor-pointer" onclick="undoCh5Letter(${i})">
                             ${s ? s.char : ''}
                         </div>`;
                     }).join('')}
@@ -789,8 +804,8 @@
 
                 <div class="flex flex-wrap justify-center gap-2 w-full">
                     ${state.chData.scrambled.map(obj => {
-                        if(obj.used) return `<div class="w-[15vw] max-w-[65px] aspect-square opacity-0"></div>`;
-                        return `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-2xl sm:text-4xl font-bold w-[15vw] max-w-[65px] aspect-square rounded-xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" onclick="selectCh5Letter(${obj.id}, '${obj.char}')">
+                        if(obj.used) return `<div class="w-[16vw] max-w-[65px] aspect-square opacity-0"></div>`;
+                        return `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-2xl sm:text-4xl font-bold w-[16vw] max-w-[65px] aspect-square rounded-xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" onclick="selectCh5Letter(${obj.id}, '${obj.char}')">
                             ${obj.char}
                         </button>`;
                     }).join('')}
@@ -813,7 +828,7 @@
                     setTimeout(winLevel, 400);
                 } else {
                     handleWrong();
-                    if(state.lives > 0) { // لو ضايل محاولات، بنمسح اللي كتبه عشان يعيد
+                    if(state.lives > 0) { 
                         state.chData.selected = [];
                         state.chData.scrambled.forEach(o => o.used = false);
                         setTimeout(updateCh5UI, 600);
