@@ -2,16 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <!-- إعدادات الشاشة لأجهزة الآيفون لمنع التمرير وضبط الحجم -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <!-- إعدادات تطبيق الويب (PWA) للآيفون -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="تحديات جواهر">
     <title>تحديات جواهر</title>
     
-    <!-- أيقونة التطبيق عند الحفظ على الشاشة الرئيسية -->
     <link rel="apple-touch-icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f31f.png">
     <link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f31f.png">
 
@@ -19,35 +15,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* إجبار الصفحة على عدم التمرير نهائياً والتثبيت المطلق للشاشة */
+        /* إجبار الصفحة على عدم التمرير نهائياً */
         html, body { 
             position: fixed;
             width: 100%;
-            height: 100dvh; /* ارتفاع ديناميكي مناسب جداً للآيفون */
+            height: 100dvh; 
             font-family: 'Cairo', sans-serif; 
             overflow: hidden; 
-            overscroll-behavior: none; /* منع تأثير السحب لتحديث الصفحة */
+            overscroll-behavior: none; 
             touch-action: none; 
-            background-color: #fce7f3; /* وردي مفضل لجواهر */
-            margin: 0;
-            padding: 0;
+            background-color: #fce7f3; 
+            margin: 0; padding: 0;
             padding-top: env(safe-area-inset-top); 
             padding-bottom: env(safe-area-inset-bottom);
         }
-        
         .no-select { user-select: none; -webkit-user-select: none; }
         .draggable { cursor: pointer; touch-action: none; position: relative; z-index: 20; }
         .draggable * { pointer-events: none; }
+        #lines-canvas { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
-        #lines-canvas { 
-            pointer-events: none; 
-            position: absolute; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            z-index: 10; 
-        }
-
-        /* حركات التفاعل (أنيميشن) */
         .shake { animation: shake 0.5s; }
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
@@ -60,47 +46,61 @@
             100% { transform: scale(1); opacity: 1; }
         }
         .matched { transition: all 0.3s; opacity: 0.5; transform: scale(0.85); }
+        /* تصغير النصوص ديناميكياً لتفادي الخروج عن الشاشة */
+        .dynamic-text { font-size: clamp(1rem, 4vw, 2.5rem); }
+        .emoji-text { font-size: clamp(2rem, 8vw, 5rem); }
     </style>
 </head>
 <body class="text-purple-900 no-select flex flex-col">
 
-    <!-- شاشة البداية (القائمة الرئيسية) -->
-    <div id="menu-screen" class="flex-1 flex flex-col items-center justify-center space-y-4 px-6 z-20 pop h-full w-full">
-        <div class="mb-4 text-center">
-            <div class="text-6xl drop-shadow-xl mb-2 animate-bounce">🌟</div>
-            <h1 class="text-4xl sm:text-5xl font-black text-purple-700 drop-shadow-md">تحديات جواهر</h1>
+    <!-- شاشة البداية -->
+    <div id="menu-screen" class="flex-1 flex flex-col items-center justify-center p-4 z-20 pop h-full w-full">
+        <div class="mb-2 text-center shrink-0">
+            <div class="text-5xl drop-shadow-xl mb-1 animate-bounce">🌟</div>
+            <h1 class="text-3xl sm:text-5xl font-black text-purple-700 drop-shadow-md">تحديات جواهر</h1>
         </div>
         
-        <button onclick="startGame(1)" class="w-full max-w-sm bg-pink-500 hover:bg-pink-600 text-white text-2xl sm:text-3xl font-bold py-4 rounded-3xl shadow-lg border-b-8 border-pink-700 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
-            <span>مد الحرف للصورة</span> <span>✏️</span>
-        </button>
-        <button onclick="startGame(2)" class="w-full max-w-sm bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-2xl sm:text-3xl font-bold py-4 rounded-3xl shadow-lg border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
-            <span>مد الرقم للعدد</span> <span>🔢</span>
-        </button>
-        <button onclick="startGame(3)" class="w-full max-w-sm bg-purple-500 hover:bg-purple-600 text-white text-2xl sm:text-3xl font-bold py-4 rounded-3xl shadow-lg border-b-8 border-purple-700 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
-            <span>اكمل الحرف الناقص</span> <span>🧩</span>
-        </button>
-        <button onclick="startGame(4)" class="w-full max-w-sm bg-blue-400 hover:bg-blue-500 text-white text-2xl sm:text-3xl font-bold py-4 rounded-3xl shadow-lg border-b-8 border-blue-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
-            <span>ترتيب الحروف</span> <span>🔠</span>
-        </button>
+        <div class="w-full max-w-sm grid grid-cols-1 gap-3 flex-1 overflow-hidden place-content-center">
+            <button onclick="startGame(1)" class="w-full bg-pink-500 hover:bg-pink-600 text-white text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-3xl shadow-lg border-b-8 border-pink-700 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
+                <span>مد الحرف للصورة</span> <span>✏️</span>
+            </button>
+            <button onclick="startGame(2)" class="w-full bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-3xl shadow-lg border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
+                <span>مد الرقم للعدد</span> <span>🔢</span>
+            </button>
+            <button onclick="startGame(3)" class="w-full bg-green-400 hover:bg-green-500 text-purple-900 text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-3xl shadow-lg border-b-8 border-green-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
+                <span>تحدي الجمع</span> <span>➕</span>
+            </button>
+            <button onclick="startGame(4)" class="w-full bg-purple-500 hover:bg-purple-600 text-white text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-3xl shadow-lg border-b-8 border-purple-700 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
+                <span>الحرف الناقص</span> <span>🧩</span>
+            </button>
+            <button onclick="startGame(5)" class="w-full bg-blue-400 hover:bg-blue-500 text-white text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-3xl shadow-lg border-b-8 border-blue-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center gap-2">
+                <span>ترتيب الحروف</span> <span>🔠</span>
+            </button>
+        </div>
     </div>
 
     <!-- شاشة اللعب -->
     <div id="game-screen" class="hidden flex-1 flex flex-col h-full w-full">
         <!-- الشريط العلوي -->
-        <div class="h-16 sm:h-20 bg-purple-600 text-white flex items-center justify-between px-4 sm:px-6 shadow-md z-30 rounded-b-3xl shrink-0">
-            <button onclick="showMenu()" class="text-2xl sm:text-3xl bg-purple-800 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-inner active:scale-90 transition-transform">🔙</button>
-            <div class="text-center flex-1">
-                <h2 id="header-title" class="text-xl sm:text-2xl font-bold truncate px-2">التحدي</h2>
-                <p id="header-level" class="text-sm sm:text-lg text-yellow-300 font-bold tracking-wider">مرحلة 1</p>
+        <div class="h-14 sm:h-16 bg-purple-600 text-white flex items-center justify-between px-3 sm:px-6 shadow-md z-30 rounded-b-3xl shrink-0">
+            <button onclick="showMenu()" class="text-xl sm:text-2xl bg-purple-800 w-10 h-10 rounded-full flex items-center justify-center shadow-inner active:scale-90 transition-transform">🔙</button>
+            
+            <div class="flex-1 flex justify-center items-center gap-2 px-2 text-center">
+                <span class="text-yellow-300 text-xl sm:text-2xl drop-shadow-md">⭐ <span id="stars-count">0</span></span>
             </div>
-            <div id="lives-container" class="text-2xl sm:text-3xl flex space-x-1 sm:space-x-2 rtl:space-x-reverse">❤️❤️❤️</div>
+
+            <div class="text-center flex-1">
+                <h2 id="header-title" class="text-sm sm:text-lg font-bold truncate">التحدي</h2>
+                <p id="header-level" class="text-xs sm:text-sm text-yellow-300 font-bold tracking-wider">مرحلة 1</p>
+            </div>
+
+            <div id="lives-container" class="text-xl sm:text-2xl flex space-x-1 rtl:space-x-reverse min-w-[70px] justify-end">❤️❤️❤️</div>
         </div>
 
         <!-- منطقة التحدي (بدون سكرول) -->
         <div id="game-area" class="flex-1 relative w-full overflow-hidden flex flex-col min-h-0">
             <canvas id="lines-canvas"></canvas>
-            <div id="game-content" class="absolute inset-0 pt-2 pb-4 px-2 sm:px-4 flex flex-col">
+            <div id="game-content" class="absolute inset-0 p-2 sm:p-4 flex flex-col">
                 <!-- المحتوى يتولد هنا -->
             </div>
         </div>
@@ -108,14 +108,20 @@
 
     <!-- نافذة منبثقة (للفوز أو الخسارة) -->
     <div id="overlay" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl pop border-8 border-yellow-400">
-            <h2 id="overlay-title" class="text-3xl sm:text-4xl font-black text-purple-700 mb-4">عنوان</h2>
-            <p id="overlay-msg" class="text-lg sm:text-xl text-gray-700 mb-6 font-bold">رسالة</p>
-            <button id="overlay-btn" class="w-full bg-pink-500 text-white text-xl sm:text-2xl font-bold py-3 sm:py-4 rounded-2xl shadow border-b-4 border-pink-700 active:border-b-0 active:translate-y-1 transition-all">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl pop border-8 border-yellow-400 flex flex-col gap-4">
+            <h2 id="overlay-title" class="text-2xl sm:text-3xl font-black text-purple-700">عنوان</h2>
+            <p id="overlay-msg" class="text-lg text-gray-700 font-bold">رسالة</p>
+            <button id="overlay-save-btn" onclick="shareImage()" class="w-full bg-blue-500 text-white text-lg font-bold py-3 rounded-xl shadow active:translate-y-1 transition-all flex justify-center items-center gap-2">
+                📸 احفظ الصورة (شهادة)
+            </button>
+            <button id="overlay-btn" class="w-full bg-pink-500 text-white text-xl font-bold py-3 rounded-xl shadow border-b-4 border-pink-700 active:border-b-0 active:translate-y-1 transition-all">
                 موافق
             </button>
         </div>
     </div>
+
+    <!-- كانفاس مخفي لرسم صورة الشهادة للتحميل -->
+    <canvas id="cert-canvas" width="800" height="800" style="display:none;"></canvas>
 
     <script>
         const fullDict = [
@@ -142,23 +148,44 @@
             {w:"ضحكة", e:"😄"},{w:"زعل", e:"😢"},{w:"نوم", e:"😴"},{w:"أكل", e:"🍲"},
             {w:"شرب", e:"🚰"},{w:"جري", e:"🏃"},{w:"قفز", e:"🦘"},{w:"غناء", e:"🎤"},
             {w:"رسم", e:"🎨"},{w:"لون", e:"🖍️"},{w:"أحمر", e:"🔴"},{w:"أزرق", e:"🔵"},
-            {w:"أخضر", e:"🟢"},{w:"أصفر", e:"🟡"},{w:"وردي", e:"🩷"},{w:"بنفسجي", e:"🟣"}
+            {w:"أخضر", e:"🟢"},{w:"أصفر", e:"🟡"},{w:"وردي", e:"🩷"},{w:"بنفسجي", e:"🟣"},
+            {w:"إجاص", e:"🍐"},{w:"مانجا", e:"🥭"},{w:"أناناس", e:"🍍"},{w:"باربي", e:"👱‍♀️"},
+            {w:"مكياج", e:"💄"},{w:"مرجيحة", e:"🛝"},{w:"حديقة", e:"🏞️"},{w:"رمل", e:"🏖️"},
+            {w:"سمى", e:"🌌"},{w:"نجوم", e:"✨"},{w:"ضو", e:"💡"},{w:"عسل", e:"🍯"},
+            {w:"جبنة", e:"🧀"},{w:"بيضة", e:"🥚"},{w:"خيار", e:"🥒"},{w:"ليمون", e:"🍋"},
+            {w:"بريز", e:"🔌"},{w:"شاحن", e:"🔋"},{w:"محرمة", e:"🧻"},{w:"شنتة", e:"🎒"},
+            {w:"ريشة", e:"🪶"},{w:"سطل", e:"🪣"},{w:"مجرفة", e:"⛏️"},{w:"راديو", e:"📻"},
+            {w:"درج", e:"🪜"},{w:"سقف", e:"🏠"},{w:"حيط", e:"🧱"},{w:"مراية", e:"🪞"},
+            {w:"حمامة", e:"🕊️"},{w:"غزال", e:"🦌"},{w:"فيل", e:"🐘"},{w:"زرافة", e:"🦒"},
+            {w:"نملة", e:"🐜"},{w:"ذبابة", e:"🪰"},{w:"لولو", e:"🦪"},{w:"خرز", e:"📿"},{w:"عقد", e:"📿"}
         ];
 
         let state = {
             challenge: 0,
             level: 1,
+            stage: 1, // للمراحل داخل التحدي
             lives: 3,
-            usedWordsCh1: [],
-            usedWordsCh3: [],
-            usedWordsCh4: [],
+            stars: parseInt(localStorage.getItem('jawaher_stars') || '0'),
+            usedWords: [],
             matchesToWin: 0,
             currentMatches: 0,
-            ch4: null,
-            ttsUnlocked: false
+            ttsUnlocked: false,
+            isShowingAnswer: false, // لمنع اللعب وقت إظهار الإجابة
+            chData: null // تخزين بيانات التحدي الحالي للإجابة
         };
 
-        // إعداد ميزة النطق الصوتي (TTS) بطريقة مضمونة للآيفون
+        document.getElementById('stars-count').innerText = state.stars;
+
+        function addStar() {
+            state.stars++;
+            localStorage.setItem('jawaher_stars', state.stars);
+            document.getElementById('stars-count').innerText = state.stars;
+            // أنيميشن للنجمة
+            let el = document.getElementById('stars-count');
+            el.classList.add('pop');
+            setTimeout(() => el.classList.remove('pop'), 400);
+        }
+
         function initTTS() {
             if ('speechSynthesis' in window && !state.ttsUnlocked) {
                 let msg = new SpeechSynthesisUtterance('');
@@ -173,7 +200,7 @@
                 window.speechSynthesis.cancel();
                 let msg = new SpeechSynthesisUtterance(text);
                 msg.lang = 'ar-SA';
-                msg.rate = 0.9; // أبطأ قليلاً ليكون أوضح للطفلة
+                msg.rate = 0.85; 
                 let voices = window.speechSynthesis.getVoices();
                 let arVoice = voices.find(v => v.lang.startsWith('ar'));
                 if (arVoice) msg.voice = arVoice;
@@ -181,10 +208,10 @@
             }
         }
 
-        // الكانفاس للخطوط
         let canvas = document.getElementById('lines-canvas');
         let ctx = canvas.getContext('2d');
         let matchedPairs = []; 
+        let answerLines = []; // خطوط الإجابة الصحيحة
         let isDrawing = false;
         let startNode = null;
         let currentTouch = {x: 0, y: 0};
@@ -198,11 +225,24 @@
 
         function drawLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.lineWidth = window.innerWidth > 400 ? 8 : 6;
             ctx.lineCap = "round";
-            
             let rect = document.getElementById('game-area').getBoundingClientRect();
 
+            // رسم خطوط الإجابة الصحيحة (لو خسر)
+            if(state.isShowingAnswer && answerLines.length > 0) {
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = "#4ade80"; // أخضر
+                answerLines.forEach(pair => {
+                    let r1 = pair.el1.getBoundingClientRect();
+                    let r2 = pair.el2.getBoundingClientRect();
+                    ctx.beginPath();
+                    ctx.moveTo(r1.left + r1.width/2 - rect.left, r1.top + r1.height/2 - rect.top);
+                    ctx.lineTo(r2.left + r2.width/2 - rect.left, r2.top + r2.height/2 - rect.top);
+                    ctx.stroke();
+                });
+            }
+
+            ctx.lineWidth = window.innerWidth > 400 ? 8 : 6;
             matchedPairs.forEach(pair => {
                 let r1 = pair.el1.getBoundingClientRect();
                 let r2 = pair.el2.getBoundingClientRect();
@@ -213,7 +253,7 @@
                 ctx.stroke();
             });
 
-            if (isDrawing && startNode) {
+            if (isDrawing && startNode && !state.isShowingAnswer) {
                 let r1 = startNode.getBoundingClientRect();
                 ctx.strokeStyle = "#f472b6"; 
                 ctx.beginPath();
@@ -228,6 +268,7 @@
         function showMenu() {
             document.getElementById('menu-screen').classList.remove('hidden');
             document.getElementById('game-screen').classList.add('hidden');
+            state.isShowingAnswer = false;
         }
 
         function startGame(ch) {
@@ -235,15 +276,13 @@
             speak('يلا نلعب'); 
             state.challenge = ch;
             state.level = 1;
+            state.stage = 1;
             state.lives = 3;
-            
-            if(ch === 1) state.usedWordsCh1 = [];
-            if(ch === 3) state.usedWordsCh3 = [];
-            if(ch === 4) state.usedWordsCh4 = [];
+            state.usedWords = [];
+            state.isShowingAnswer = false;
             
             document.getElementById('menu-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
-            // تأخير بسيط لضمان رسم المنطقة بالشكل الصحيح
             setTimeout(() => {
                 resizeCanvas();
                 renderCurrentChallenge();
@@ -251,29 +290,33 @@
         }
 
         function updateHeader() {
-            document.getElementById('header-level').innerText = `مرحلة ${state.level}`;
-            const titles = ["", "مد الحرف للصورة", "مد الرقم للعدد", "اكمل الحرف الناقص", "ترتيب الحروف"];
+            let lvlTxt = `مستوى ${state.level}`;
+            if(state.challenge === 3 || state.challenge === 4) lvlTxt = `مرحلة ${state.stage}`;
+            document.getElementById('header-level').innerText = lvlTxt;
+            
+            const titles = ["", "مد الحرف للصورة", "مد الرقم للعدد", "تحدي الجمع", "اكمل الحرف الناقص", "ترتيب الحروف"];
             document.getElementById('header-title').innerText = titles[state.challenge];
             updateLivesDisplay();
         }
 
         function updateLivesDisplay() {
             let hearts = '';
-            for(let i=0; i<3; i++) {
-                hearts += i < state.lives ? '❤️' : '🖤';
-            }
+            for(let i=0; i<3; i++) hearts += i < state.lives ? '❤️' : '🖤';
             document.getElementById('lives-container').innerText = hearts;
         }
 
         function renderCurrentChallenge() {
+            state.isShowingAnswer = false;
             updateHeader();
             matchedPairs = []; 
+            answerLines = [];
             document.getElementById('game-content').innerHTML = '';
 
             if (state.challenge === 1) renderChallenge1();
             else if (state.challenge === 2) renderChallenge2();
             else if (state.challenge === 3) renderChallenge3();
             else if (state.challenge === 4) renderChallenge4();
+            else if (state.challenge === 5) renderChallenge5();
         }
 
         function shuffle(array) {
@@ -283,20 +326,89 @@
             }
         }
 
-        function showOverlay(title, msg, btnText, callback) {
+        function showOverlay(title, msg, btnText, isWin) {
             let overlay = document.getElementById('overlay');
             document.getElementById('overlay-title').innerText = title;
             document.getElementById('overlay-msg').innerText = msg;
+            
+            // تجهيز بيانات الشهادة
+            state.overlayData = { title: isWin ? "شهادة فوز بطلة!" : "شهادة محاولة شجاعة!", msg, isWin };
+            
             let btn = document.getElementById('overlay-btn');
             btn.innerText = btnText;
             btn.onclick = () => {
                 overlay.classList.add('hidden');
-                callback();
+                if(isWin) {
+                    let maxLvl = (state.challenge===1 || state.challenge===2) ? 5 : (state.challenge===3 ? 3 : 16);
+                    if((state.challenge===1||state.challenge===2) && state.level >= maxLvl) showMenu();
+                    else if(state.challenge===3 && state.level > 3) showMenu();
+                    else if((state.challenge===4||state.challenge===5) && state.stage >= 16) showMenu();
+                    else renderCurrentChallenge();
+                } else {
+                    renderCurrentChallenge(); // الخسارة تعيد التحدي بتشكيلة جديدة
+                }
             };
             overlay.classList.remove('hidden');
         }
 
+        // حفظ الصورة (الشهادة)
+        async function shareImage() {
+            const cvs = document.getElementById('cert-canvas');
+            const c = cvs.getContext('2d');
+            
+            // خلفية
+            c.fillStyle = state.overlayData.isWin ? '#fdf2f8' : '#fffbeb'; // وردي فاتح أو أصفر فاتح
+            c.fillRect(0, 0, 800, 800);
+            
+            // إطار
+            c.strokeStyle = state.overlayData.isWin ? '#ec4899' : '#eab308';
+            c.lineWidth = 20;
+            c.strokeRect(20, 20, 760, 760);
+
+            // نصوص
+            c.textAlign = 'center';
+            c.fillStyle = '#7e22ce'; // بنفسجي
+            c.font = 'bold 60px Cairo, sans-serif';
+            c.fillText('🌟 تحديات جواهر 🌟', 400, 150);
+
+            c.font = 'bold 80px Cairo, sans-serif';
+            c.fillStyle = state.overlayData.isWin ? '#ec4899' : '#ca8a04';
+            c.fillText(state.overlayData.title, 400, 350);
+
+            c.font = 'bold 50px Cairo, sans-serif';
+            c.fillStyle = '#374151';
+            c.fillText(state.overlayData.msg, 400, 500);
+
+            c.font = 'bold 40px Cairo, sans-serif';
+            c.fillStyle = '#eab308';
+            c.fillText('النجوم: ⭐ ' + state.stars, 400, 650);
+
+            // تحويل ومشاركة
+            try {
+                const dataUrl = cvs.toDataURL('image/png');
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], 'jawaher_certificate.png', { type: blob.type });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'شهادة جواهر',
+                        text: 'شهادة من تطبيق تحديات جواهر!'
+                    });
+                } else {
+                    // Fallback
+                    const link = document.createElement('a');
+                    link.download = 'jawaher_certificate.png';
+                    link.href = dataUrl;
+                    link.click();
+                }
+            } catch (err) {
+                console.log('Error sharing', err);
+            }
+        }
+
         function handleWrong() {
+            if(state.isShowingAnswer) return;
             speak('حاولي مرة أخرى');
             state.lives--;
             updateLivesDisplay();
@@ -305,118 +417,90 @@
             setTimeout(() => area.classList.remove('shake'), 500);
 
             if(state.lives <= 0) {
-                setTimeout(gameOver, 500);
+                showAnswerAndGameOver();
             }
         }
 
-        function gameOver() {
-            speak('خلصوا المحاولات');
-            state.level = 1;
-            state.lives = 3;
-            if(state.challenge === 1) state.usedWordsCh1 = [];
-            if(state.challenge === 3) state.usedWordsCh3 = [];
-            if(state.challenge === 4) state.usedWordsCh4 = [];
+        function showAnswerAndGameOver() {
+            state.isShowingAnswer = true;
+            speak('شوفي الإجابة الصح يا بطلة');
             
-            showOverlay('خلصوا المحاولات! 💔', 'معلش يا جواهر، يلا نعيد التحدي من الأول وبعرف إنك بطلة وقدها!', 'إعادة التحدي', () => {
-                renderCurrentChallenge();
-            });
+            // إظهار الإجابة حسب التحدي
+            if(state.challenge === 1 || state.challenge === 2) {
+                // رسم خطوط للخيارات المتبقية
+                let leftEls = document.querySelectorAll('.draggable:not(.matched)');
+                let type1 = state.challenge === 1 ? 'letter' : 'number';
+                
+                let list1 = Array.from(leftEls).filter(e => e.dataset.type === type1);
+                let list2 = Array.from(leftEls).filter(e => e.dataset.type !== type1);
+                
+                list1.forEach(el1 => {
+                    let el2 = list2.find(e => e.dataset.id === el1.dataset.id);
+                    if(el2) answerLines.push({el1, el2});
+                });
+            } else if (state.challenge === 3 || state.challenge === 4) {
+                // تضوي الزر الصح
+                let correctBtn = Array.from(document.querySelectorAll('.ans-btn')).find(b => b.dataset.correct === 'true');
+                if(correctBtn) {
+                    correctBtn.classList.replace('bg-yellow-400', 'bg-green-400');
+                    correctBtn.classList.add('animate-pulse');
+                }
+            } else if (state.challenge === 5) {
+                // ترتيب الحروف الصح
+                let slots = document.querySelectorAll('.ch5-slot');
+                state.chData.letters.forEach((char, i) => {
+                    if(slots[i]) slots[i].innerText = char;
+                    slots[i].classList.add('text-green-600', 'bg-green-100');
+                });
+            }
+
+            // بعد 3 ثواني نعرض شاشة الخسارة
+            setTimeout(() => {
+                state.lives = 3;
+                // ما بنصفر المرحلة، بس بنعيد تشكيلة الكلمات لنفس المرحلة
+                showOverlay('خلصوا المحاولات! 💔', 'تعلمنا الصح! يلا نعيد التحدي يا بطلة!', 'إعادة المحاولة', false);
+            }, 3500);
         }
 
         function winLevel() {
+            addStar();
             speak('ممتاز يا بطلة');
-            let maxLevels = (state.challenge === 3) ? 16 : 5;
-            if(state.level >= maxLevels) {
-                showOverlay('مبروووك يا بطلة! 🎉', 'يا عيني على الشطارة! خلصتي كل مستويات التحدي بامتياز!', 'رجوع للقائمة', () => showMenu());
-            } else {
-                state.level++;
-                showOverlay('شطووورة! 🌟', 'بطلة يا جواهر! يلا نكمل للمرحلة اللي بعدها.', 'التالي', () => renderCurrentChallenge());
-            }
-        }
-
-        // ============================================
-        // تحدي 1: مد الحرف للصورة (5 كلمات - Layout محسّن لمنع السكرول)
-        // ============================================
-        function renderChallenge1() {
-            let available = fullDict.filter(d => !state.usedWordsCh1.includes(d.w));
-            shuffle(available);
             
-            let selectedWords = [];
-            let usedLetters = new Set();
-            for (let item of available) {
-                let firstLetter = item.w.charAt(0);
-                if (!usedLetters.has(firstLetter)) {
-                    selectedWords.push(item);
-                    usedLetters.add(firstLetter);
-                    if (selectedWords.length === 5) break;
+            if(state.challenge === 1 || state.challenge === 2) {
+                if(state.level >= 5) {
+                    showOverlay('مبروووك يا بطلة! 🎉', `يا عيني على الشطارة! خلصتي كل مستويات التحدي! جمعتي ${state.stars} نجمة!`, 'رجوع للقائمة', true);
+                } else {
+                    state.level++;
+                    showOverlay('شطووورة! 🌟', 'بطلة يا جواهر! يلا للمستوى اللي بعده.', 'التالي', true);
+                }
+            } 
+            else if (state.challenge === 3) {
+                if(state.stage >= 10) {
+                    if(state.level >= 3) {
+                        showOverlay('بطلة الحساب! 🎉', 'أنهيتي كل تحديات الجمع!', 'رجوع للقائمة', true);
+                    } else {
+                        state.level++;
+                        state.stage = 1;
+                        showOverlay('يا عيني! 🌟', 'خلصنا المستوى، يلا نصعبها شوي!', 'التالي', true);
+                    }
+                } else {
+                    state.stage++;
+                    showOverlay('شطووورة! 🌟', `خلصتي مرحلة ${state.stage - 1}، يلا نكمل!`, 'التالي', true);
                 }
             }
-
-            if(selectedWords.length < 5) {
-                state.usedWordsCh1 = []; 
-                renderChallenge1();
-                return;
+            else { // 4 و 5
+                if(state.stage >= 16) {
+                    showOverlay('مبروووك يا بطلة! 🎉', 'ختمتي التحدي بامتياز!', 'رجوع للقائمة', true);
+                } else {
+                    state.stage++;
+                    showOverlay('شطووورة! 🌟', `بطلة يا جواهر! يلا للمرحلة ${state.stage}.`, 'التالي', true);
+                }
             }
-
-            selectedWords.forEach(w => state.usedWordsCh1.push(w.w));
-
-            let letters = selectedWords.map(item => ({ id: item.w, content: item.w.charAt(0) }));
-            let emojis = selectedWords.map(item => ({ id: item.w, content: item.e }));
-
-            shuffle(letters);
-            shuffle(emojis);
-
-            let html = `
-            <div class="flex justify-between items-center w-full max-w-lg mx-auto flex-1 z-20 pop">
-                <div class="flex flex-col justify-evenly h-full w-1/3">
-                    ${letters.map(l => `<div class="draggable bg-yellow-400 rounded-full w-[12vw] max-w-[60px] aspect-square flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-lg border-4 border-white text-purple-900 mx-auto" data-type="letter" data-id="${l.id}">${l.content}</div>`).join('')}
-                </div>
-                <div class="flex flex-col justify-evenly h-full w-1/3 items-end">
-                    ${emojis.map(e => `<div class="draggable bg-white rounded-2xl w-[14vw] max-w-[70px] aspect-square flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-4 border-pink-400 mx-auto" data-type="emoji" data-id="${e.id}">${e.content}</div>`).join('')}
-                </div>
-            </div>`;
-            
-            document.getElementById('game-content').innerHTML = html;
-            state.matchesToWin = 5;
-            state.currentMatches = 0;
-            bindDragEvents();
         }
 
         // ============================================
-        // تحدي 2: مد الرقم على العدد (5 كلمات - Layout محسّن)
+        // نظام السحب المشترك للتحديات 1 و 2
         // ============================================
-        function renderChallenge2() {
-            let numbers = [];
-            while(numbers.length < 5) {
-                let r = Math.floor(Math.random() * 8) + 1; 
-                if(!numbers.includes(r)) numbers.push(r);
-            }
-            
-            let numberData = numbers.map(n => ({ id: n, content: n }));
-            let emojiData = numbers.map(n => {
-                let randomEmoji = fullDict[Math.floor(Math.random() * fullDict.length)].e;
-                let repeated = Array(n).fill(`<span class="text-xl sm:text-2xl">${randomEmoji}</span>`).join('');
-                return { id: n, content: `<div class="flex flex-wrap justify-center items-center gap-0.5 pointer-events-none">${repeated}</div>` };
-            });
-
-            shuffle(numberData);
-            shuffle(emojiData);
-
-            let html = `
-            <div class="flex justify-between items-center w-full max-w-lg mx-auto flex-1 z-20 pop">
-                <div class="flex flex-col justify-evenly h-full w-1/3">
-                    ${numberData.map(n => `<div class="draggable bg-pink-400 rounded-full w-[12vw] max-w-[60px] aspect-square flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-lg border-4 border-white text-white mx-auto" data-type="number" data-id="${n.id}">${n.content}</div>`).join('')}
-                </div>
-                <div class="flex flex-col justify-evenly h-full w-1/2">
-                    ${emojiData.map(e => `<div class="draggable bg-white rounded-2xl w-full max-w-[120px] p-2 min-h-[50px] sm:min-h-[64px] flex items-center justify-center shadow-lg border-4 border-yellow-400 mx-auto" data-type="emoji-count" data-id="${e.id}">${e.content}</div>`).join('')}
-                </div>
-            </div>`;
-            
-            document.getElementById('game-content').innerHTML = html;
-            state.matchesToWin = 5;
-            state.currentMatches = 0;
-            bindDragEvents();
-        }
-
         function bindDragEvents() {
             const draggables = document.querySelectorAll('.draggable');
             draggables.forEach(el => {
@@ -424,10 +508,9 @@
                 el.addEventListener('mousedown', onPointerDown, {passive: false});
             });
         }
-
         function onPointerDown(e) {
             e.preventDefault();
-            if(e.target.classList.contains('matched')) return;
+            if(state.isShowingAnswer || e.target.classList.contains('matched')) return;
 
             startNode = e.target.closest('.draggable');
             if (startNode) {
@@ -436,43 +519,31 @@
                 if(type === 'letter') speak(val.charAt(0));
                 else if(type === 'emoji') speak(val);
                 else if(type === 'number') speak(val);
-                // للعدد المكرر لا ننطق شيء مبدئيا عشان ما يصير ازعاج
             }
-
             isDrawing = true;
             let clientX = e.touches ? e.touches[0].clientX : e.clientX;
             let clientY = e.touches ? e.touches[0].clientY : e.clientY;
             currentTouch = {x: clientX, y: clientY};
         }
-
         window.addEventListener('touchmove', (e) => {
             if (!isDrawing) return;
             e.preventDefault();
-            let clientX = e.touches[0].clientX;
-            let clientY = e.touches[0].clientY;
-            currentTouch = {x: clientX, y: clientY};
+            currentTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY};
         }, {passive: false});
-
         window.addEventListener('mousemove', (e) => {
             if (!isDrawing) return;
             currentTouch = {x: e.clientX, y: e.clientY};
         });
-
         window.addEventListener('touchend', (e) => {
             if (!isDrawing) return;
-            let clientX = e.changedTouches[0].clientX;
-            let clientY = e.changedTouches[0].clientY;
-            handlePointerUp(clientX, clientY);
+            handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
         });
-
         window.addEventListener('mouseup', (e) => {
             if (!isDrawing) return;
             handlePointerUp(e.clientX, e.clientY);
         });
-
         function handlePointerUp(x, y) {
             isDrawing = false;
-            
             canvas.style.display = 'none';
             let endNodeRaw = document.elementFromPoint(x, y);
             canvas.style.display = 'block';
@@ -487,10 +558,7 @@
                     startNode.classList.add('matched', 'bg-green-200');
                     endNode.classList.add('matched', 'bg-green-200');
                     state.currentMatches++;
-                    
-                    if(state.currentMatches === state.matchesToWin) {
-                        setTimeout(winLevel, 500);
-                    }
+                    if(state.currentMatches === state.matchesToWin) setTimeout(winLevel, 500);
                 } else {
                     handleWrong();
                 }
@@ -499,21 +567,148 @@
         }
 
         // ============================================
-        // تحدي 3: اكمل الحرف الناقص
+        // 1: مد الحرف للصورة (5 كلمات - يمنع تشابه أول حرف)
+        // ============================================
+        function renderChallenge1() {
+            let available = fullDict.filter(d => !state.usedWords.includes(d.w));
+            shuffle(available);
+            
+            let selectedWords = [];
+            let usedLetters = new Set();
+            for (let item of available) {
+                let firstLetter = item.w.charAt(0);
+                if (!usedLetters.has(firstLetter)) {
+                    selectedWords.push(item);
+                    usedLetters.add(firstLetter);
+                    if (selectedWords.length === 5) break;
+                }
+            }
+            if(selectedWords.length < 5) {
+                state.usedWords = []; // خلصوا الكلمات، تصفير والبدء
+                renderChallenge1();
+                return;
+            }
+            selectedWords.forEach(w => state.usedWords.push(w.w));
+
+            let letters = selectedWords.map(item => ({ id: item.w, content: item.w.charAt(0) }));
+            let emojis = selectedWords.map(item => ({ id: item.w, content: item.e }));
+            shuffle(letters); shuffle(emojis);
+
+            let html = `
+            <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2">
+                <div class="flex flex-col justify-evenly h-full w-[25%]">
+                    ${letters.map(l => `<div class="draggable bg-yellow-400 rounded-full w-full aspect-square flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-purple-900 mx-auto" data-type="letter" data-id="${l.id}">${l.content}</div>`).join('')}
+                </div>
+                <div class="flex flex-col justify-evenly h-full w-[30%] items-end">
+                    ${emojis.map(e => `<div class="draggable bg-white rounded-2xl w-full aspect-square flex items-center justify-center text-4xl sm:text-5xl shadow-lg border-4 border-pink-400 mx-auto" data-type="emoji" data-id="${e.id}">${e.content}</div>`).join('')}
+                </div>
+            </div>`;
+            document.getElementById('game-content').innerHTML = html;
+            state.matchesToWin = 5; state.currentMatches = 0;
+            bindDragEvents();
+        }
+
+        // ============================================
+        // 2: مد الرقم على العدد
+        // ============================================
+        function renderChallenge2() {
+            let numbers = [];
+            while(numbers.length < 5) {
+                let r = Math.floor(Math.random() * 8) + 1; 
+                if(!numbers.includes(r)) numbers.push(r);
+            }
+            let numberData = numbers.map(n => ({ id: n, content: n }));
+            let emojiData = numbers.map(n => {
+                let rEmoji = fullDict[Math.floor(Math.random() * fullDict.length)].e;
+                let repeated = Array(n).fill(`<span class="text-2xl">${rEmoji}</span>`).join('');
+                return { id: n, content: `<div class="flex flex-wrap justify-center items-center gap-0.5 pointer-events-none">${repeated}</div>` };
+            });
+            shuffle(numberData); shuffle(emojiData);
+
+            let html = `
+            <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2">
+                <div class="flex flex-col justify-evenly h-full w-[25%]">
+                    ${numberData.map(n => `<div class="draggable bg-pink-400 rounded-full w-full aspect-square flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-white mx-auto" data-type="number" data-id="${n.id}">${n.content}</div>`).join('')}
+                </div>
+                <div class="flex flex-col justify-evenly h-full w-[50%]">
+                    ${emojiData.map(e => `<div class="draggable bg-white rounded-2xl w-full p-2 min-h-[12vh] flex items-center justify-center shadow-lg border-4 border-yellow-400 mx-auto" data-type="emoji-count" data-id="${e.id}">${e.content}</div>`).join('')}
+                </div>
+            </div>`;
+            document.getElementById('game-content').innerHTML = html;
+            state.matchesToWin = 5; state.currentMatches = 0;
+            bindDragEvents();
+        }
+
+        // ============================================
+        // 3: تحدي الجمع بالرموز (مستويات 1 لـ 3)
         // ============================================
         function renderChallenge3() {
-            let available = fullDict.filter(d => !state.usedWordsCh3.includes(d.w) && d.w.length >= 3);
-            if(available.length === 0) { 
-                state.usedWordsCh3 = []; 
-                available = fullDict.filter(d => d.w.length >= 3); 
-            }
+            let maxTotal = state.level === 1 ? 6 : (state.level === 2 ? 8 : 10);
+            
+            // اختيار رقمين عشوائيين مجموعهم لا يتجاوز maxTotal و لا يكون 0
+            let a = Math.floor(Math.random() * (maxTotal - 1)) + 1;
+            let b = Math.floor(Math.random() * (maxTotal - a)) + 1;
+            let ans = a + b;
+            
+            let e1 = fullDict[Math.floor(Math.random() * fullDict.length)].e;
+            let e2 = fullDict[Math.floor(Math.random() * fullDict.length)].e;
 
+            // خيارات الإجابة
+            let options = [ans];
+            while(options.length < 3) {
+                let r = Math.floor(Math.random() * maxTotal) + 1;
+                if(!options.includes(r)) options.push(r);
+            }
+            shuffle(options);
+
+            let str1 = Array(a).fill(e1).join('');
+            let str2 = Array(b).fill(e2).join('');
+
+            let html = `
+            <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-2">
+                <div class="flex flex-col items-center gap-2 sm:gap-4 bg-white p-4 rounded-3xl shadow border-4 border-purple-200 w-full max-w-sm">
+                    <div class="dynamic-text flex flex-wrap justify-center items-center cursor-pointer" onclick="speak('${a}')">${str1} <span class="text-xs absolute opacity-0">${a}</span></div>
+                    <div class="text-4xl font-black text-purple-600">➕</div>
+                    <div class="dynamic-text flex flex-wrap justify-center items-center cursor-pointer" onclick="speak('${b}')">${str2} <span class="text-xs absolute opacity-0">${b}</span></div>
+                </div>
+                
+                <div class="text-5xl font-black text-pink-500">= ؟</div>
+
+                <div class="flex gap-4 w-full justify-center mt-2">
+                    ${options.map(opt => `
+                        <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-4xl sm:text-5xl font-bold w-[20vw] max-w-[80px] aspect-square rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" data-correct="${opt === ans}" onclick="checkCh3Ans(this, ${opt === ans}, ${opt})">
+                            ${opt}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>`;
+            document.getElementById('game-content').innerHTML = html;
+        }
+
+        function checkCh3Ans(btn, isCorrect, val) {
+            if(state.isShowingAnswer) return;
+            speak(val);
+            if(isCorrect) {
+                btn.classList.replace('bg-yellow-400', 'bg-green-400');
+                setTimeout(winLevel, 400);
+            } else {
+                btn.classList.replace('bg-yellow-400', 'bg-red-400');
+                setTimeout(() => btn.classList.replace('bg-red-400', 'bg-yellow-400'), 500);
+                handleWrong();
+            }
+        }
+
+        // ============================================
+        // 4: اكمل الحرف الناقص
+        // ============================================
+        function renderChallenge4() {
+            let available = fullDict.filter(d => !state.usedWords.includes(d.w) && d.w.length >= 3);
+            if(available.length === 0) { state.usedWords = []; available = fullDict.filter(d => d.w.length >= 3); }
             let item = available[Math.floor(Math.random() * available.length)];
-            state.usedWordsCh3.push(item.w);
+            state.usedWords.push(item.w);
 
             let hideIdx = Math.floor(Math.random() * item.w.length);
             let hiddenLetter = item.w[hideIdx];
-
             let displayWord = item.w.split('');
             displayWord[hideIdx] = 'ـ_ـ';
 
@@ -526,93 +721,76 @@
             shuffle(options);
 
             let html = `
-            <div class="flex flex-col items-center justify-evenly flex-1 w-full text-center pop h-full">
-                <div class="text-[12vh] sm:text-[15vh] drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${item.w}')">${item.e}</div>
+            <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-4">
+                <div class="emoji-text drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${item.w}')">${item.e}</div>
                 
-                <div class="text-4xl sm:text-6xl font-black tracking-widest text-white bg-purple-600 px-6 sm:px-8 py-4 sm:py-6 rounded-3xl shadow-xl border-4 border-yellow-400 w-full max-w-sm mx-auto break-words">
+                <div class="dynamic-text font-black tracking-widest text-white bg-purple-600 px-6 py-4 rounded-3xl shadow-xl border-4 border-yellow-400 w-full max-w-sm mx-auto">
                     ${displayWord.join('')}
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4 w-full max-w-sm mx-auto">
+                <div class="grid grid-cols-2 gap-4 w-full max-w-xs mx-auto">
                     ${options.map(opt => `
-                        <button class="ch3-option bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-4xl sm:text-5xl font-bold py-4 sm:py-6 rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" data-letter="${opt}">
+                        <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl sm:text-5xl font-bold py-4 rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" data-correct="${opt === hiddenLetter}" onclick="checkCh4Ans(this, ${opt === hiddenLetter}, '${opt}')">
                             ${opt}
                         </button>
                     `).join('')}
                 </div>
             </div>`;
-
             document.getElementById('game-content').innerHTML = html;
+        }
 
-            document.querySelectorAll('.ch3-option').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    speak(btn.dataset.letter);
-                    if(btn.dataset.letter === hiddenLetter) {
-                        btn.classList.replace('bg-yellow-400', 'bg-green-400');
-                        btn.classList.replace('border-yellow-600', 'border-green-600');
-                        setTimeout(winLevel, 400);
-                    } else {
-                        btn.classList.replace('bg-yellow-400', 'bg-red-400');
-                        btn.classList.replace('border-yellow-600', 'border-red-600');
-                        setTimeout(() => {
-                            btn.classList.replace('bg-red-400', 'bg-yellow-400');
-                            btn.classList.replace('border-red-600', 'border-yellow-600');
-                        }, 500);
-                        handleWrong();
-                    }
-                });
-            });
+        function checkCh4Ans(btn, isCorrect, letter) {
+            if(state.isShowingAnswer) return;
+            speak(letter);
+            if(isCorrect) {
+                btn.classList.replace('bg-yellow-400', 'bg-green-400');
+                setTimeout(winLevel, 400);
+            } else {
+                btn.classList.replace('bg-yellow-400', 'bg-red-400');
+                setTimeout(() => btn.classList.replace('bg-red-400', 'bg-yellow-400'), 500);
+                handleWrong();
+            }
         }
 
         // ============================================
-        // تحدي 4: ترتيب الحروف
+        // 5: ترتيب الحروف
         // ============================================
-        function renderChallenge4() {
-            let available = fullDict.filter(d => !state.usedWordsCh4.includes(d.w) && d.w.length >= 3 && d.w.length <= 5);
-            if(available.length === 0) { 
-                state.usedWordsCh4 = []; 
-                available = fullDict.filter(d => d.w.length >= 3 && d.w.length <= 5); 
-            }
-
+        function renderChallenge5() {
+            let available = fullDict.filter(d => !state.usedWords.includes(d.w) && d.w.length >= 3 && d.w.length <= 5);
+            if(available.length === 0) { state.usedWords = []; available = fullDict.filter(d => d.w.length >= 3 && d.w.length <= 5); }
             let item = available[Math.floor(Math.random() * available.length)];
-            state.usedWordsCh4.push(item.w);
+            state.usedWords.push(item.w);
 
             let letters = item.w.split('');
             let scrambled = [...letters];
             shuffle(scrambled);
 
-            state.ch4 = {
-                word: item.w,
-                emoji: item.e,
-                letters: letters,
+            state.chData = {
+                word: item.w, emoji: item.e, letters: letters,
                 scrambled: scrambled.map((char, id) => ({char, id, used: false})),
                 selected: []
             };
-
-            updateCh4UI();
+            updateCh5UI();
         }
 
-        function updateCh4UI() {
+        function updateCh5UI() {
             let html = `
-            <div class="flex flex-col items-center justify-evenly flex-1 w-full text-center pop h-full">
-                <!-- Emoji -->
-                <div class="text-[12vh] sm:text-[15vh] drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${state.ch4.word}')">${state.ch4.emoji}</div>
+            <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-2">
+                <div class="emoji-text drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${state.chData.word}')">${state.chData.emoji}</div>
                 
-                <!-- Slots (المربعات الفارغة) -->
-                <div class="flex space-x-2 rtl:space-x-reverse justify-center w-full">
-                    ${state.ch4.letters.map((_, i) => {
-                        let s = state.ch4.selected[i];
-                        return `<div class="w-[12vw] max-w-[60px] aspect-square bg-purple-200 border-4 border-purple-500 rounded-xl flex items-center justify-center text-3xl sm:text-4xl font-bold text-purple-900 shadow-inner cursor-pointer" onclick="undoCh4Letter(${i})">
+                <div class="flex space-x-1 rtl:space-x-reverse justify-center w-full">
+                    ${state.chData.letters.map((_, i) => {
+                        let s = state.chData.selected[i];
+                        return `<div class="ch5-slot w-[15vw] max-w-[65px] aspect-square bg-purple-200 border-4 border-purple-500 rounded-xl flex items-center justify-center text-2xl sm:text-4xl font-bold text-purple-900 shadow-inner cursor-pointer" onclick="undoCh5Letter(${i})">
                             ${s ? s.char : ''}
                         </div>`;
                     }).join('')}
                 </div>
 
-                <!-- Scrambled Options (الحروف المبعثرة) -->
-                <div class="flex flex-wrap justify-center gap-2 sm:gap-4 w-full px-2">
-                    ${state.ch4.scrambled.map(obj => {
-                        if(obj.used) return `<div class="w-[12vw] max-w-[60px] aspect-square opacity-0"></div>`;
-                        return `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl sm:text-4xl font-bold w-[12vw] max-w-[60px] aspect-square rounded-xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" onclick="selectCh4Letter(${obj.id}, '${obj.char}')">
+                <div class="flex flex-wrap justify-center gap-2 w-full">
+                    ${state.chData.scrambled.map(obj => {
+                        if(obj.used) return `<div class="w-[15vw] max-w-[65px] aspect-square opacity-0"></div>`;
+                        return `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-2xl sm:text-4xl font-bold w-[15vw] max-w-[65px] aspect-square rounded-xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center" onclick="selectCh5Letter(${obj.id}, '${obj.char}')">
                             ${obj.char}
                         </button>`;
                     }).join('')}
@@ -621,39 +799,37 @@
             document.getElementById('game-content').innerHTML = html;
         }
 
-        function selectCh4Letter(id, char) {
+        function selectCh5Letter(id, char) {
+            if(state.isShowingAnswer) return;
             speak(char);
-            let obj = state.ch4.scrambled.find(o => o.id === id);
+            let obj = state.chData.scrambled.find(o => o.id === id);
             obj.used = true;
-            state.ch4.selected.push({id, char});
-            
-            updateCh4UI();
+            state.chData.selected.push({id, char});
+            updateCh5UI();
 
-            if(state.ch4.selected.length === state.ch4.letters.length) {
-                setTimeout(checkCh4Win, 400);
+            if(state.chData.selected.length === state.chData.letters.length) {
+                let formedWord = state.chData.selected.map(s => s.char).join('');
+                if(formedWord === state.chData.word) {
+                    setTimeout(winLevel, 400);
+                } else {
+                    handleWrong();
+                    if(state.lives > 0) { // لو ضايل محاولات، بنمسح اللي كتبه عشان يعيد
+                        state.chData.selected = [];
+                        state.chData.scrambled.forEach(o => o.used = false);
+                        setTimeout(updateCh5UI, 600);
+                    }
+                }
             }
         }
 
-        function undoCh4Letter(index) {
-            if(!state.ch4.selected[index]) return;
-            let sel = state.ch4.selected[index];
-            state.ch4.selected.splice(index, 1);
-            let obj = state.ch4.scrambled.find(o => o.id === sel.id);
+        function undoCh5Letter(index) {
+            if(state.isShowingAnswer || !state.chData.selected[index]) return;
+            let sel = state.chData.selected[index];
+            state.chData.selected.splice(index, 1);
+            let obj = state.chData.scrambled.find(o => o.id === sel.id);
             obj.used = false;
             speak('رجوع');
-            updateCh4UI();
-        }
-
-        function checkCh4Win() {
-            let formedWord = state.ch4.selected.map(s => s.char).join('');
-            if(formedWord === state.ch4.word) {
-                winLevel();
-            } else {
-                handleWrong();
-                state.ch4.selected = [];
-                state.ch4.scrambled.forEach(o => o.used = false);
-                updateCh4UI();
-            }
+            updateCh5UI();
         }
     </script>
 </body>
