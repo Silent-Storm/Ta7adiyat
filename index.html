@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- إعدادات تطبيق الويب (PWA) -->
+    <!-- إعدادات تطبيق الويب (PWA) للآيفون -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="جواهر">
@@ -18,15 +18,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* إجبار الصفحة على عدم التمرير نهائياً والتثبيت المطلق */
+        /* التثبيت المطلق للشاشة ومنع التمرير نهائياً */
         html, body { 
-            position: fixed;
-            width: 100%;
-            height: 100dvh; 
+            position: fixed; width: 100%; height: 100dvh; 
             font-family: 'Cairo', sans-serif; 
-            overflow: hidden; 
-            overscroll-behavior: none; 
-            touch-action: none; 
+            overflow: hidden; overscroll-behavior: none; touch-action: none; 
             background-color: #fce7f3; /* وردي طفولي */
             margin: 0; padding: 0;
             padding-top: env(safe-area-inset-top); 
@@ -35,8 +31,11 @@
         .no-select { user-select: none; -webkit-user-select: none; }
         .draggable { cursor: pointer; touch-action: none; position: relative; z-index: 20; }
         .draggable * { pointer-events: none; }
-        #lines-canvas { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
         
+        #lines-canvas { pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        #maze-canvas { touch-action: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; }
+        
+        /* حركات التفاعل الأساسية فقط */
         .shake { animation: shake 0.5s; }
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
@@ -48,41 +47,49 @@
             0% { transform: scale(0.5); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
-        .matched { transition: all 0.3s; opacity: 0.5; transform: scale(0.85); }
+        .matched { transition: all 0.3s; opacity: 0.5; transform: scale(0.85); pointer-events: none; }
         
-        /* توافق خطوط العرض مع مختلف الأجهزة */
-        .dynamic-text { font-size: clamp(1rem, 4vw, 2.5rem); }
-        .emoji-text { font-size: clamp(2rem, 8vw, 5rem); }
+        /* لعبة الذاكرة 3D Flip */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
     </style>
 </head>
 <body class="text-purple-900 no-select flex flex-col">
 
     <!-- شاشة البداية (القائمة الرئيسية) -->
-    <div id="menu-screen" class="flex-1 flex flex-col items-center justify-center p-4 z-20 pop h-full w-full">
-        <div class="mb-4 text-center shrink-0 flex flex-col items-center">
-            <div class="text-6xl drop-shadow-xl mb-1 animate-bounce">🌟</div>
-            <h1 class="text-5xl font-black text-purple-700 drop-shadow-md tracking-wide">جواهر</h1>
+    <div id="menu-screen" class="flex-1 flex flex-col items-center justify-start pt-4 sm:pt-8 p-2 z-20 pop h-full w-full overflow-hidden">
+        <div class="mb-3 text-center shrink-0 flex flex-col items-center">
+            <div class="text-5xl sm:text-6xl drop-shadow-xl mb-1 animate-bounce">🌟</div>
+            <h1 class="text-4xl sm:text-5xl font-black text-purple-700 drop-shadow-md tracking-wide">جواهر</h1>
         </div>
         
-        <!-- شبكة الأزرار (6 تحديات) لتفادي التمرير -->
-        <div class="w-full max-w-md grid grid-cols-2 gap-3 flex-1 overflow-hidden place-content-center px-2">
-            <button onclick="startGame(1)" class="flex flex-col items-center justify-center bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 rounded-3xl shadow-lg border-b-8 border-pink-700 active:border-b-0 active:translate-y-2 transition-all">
-                <span class="text-3xl mb-1">✏️</span><span class="text-sm sm:text-lg text-center">مد الحرف</span>
+        <!-- شبكة الأزرار (8 تحديات) -->
+        <div class="w-full max-w-md grid grid-cols-2 gap-2 sm:gap-3 flex-1 pb-4 place-content-center px-2">
+            <button onclick="startGame(1)" class="flex flex-col items-center justify-center bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-2xl shadow border-b-4 border-pink-700 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">✏️</span><span class="text-sm sm:text-base text-center">مد الحرف</span>
             </button>
-            <button onclick="startGame(2)" class="flex flex-col items-center justify-center bg-red-400 hover:bg-red-500 text-white font-bold py-4 rounded-3xl shadow-lg border-b-8 border-red-600 active:border-b-0 active:translate-y-2 transition-all">
-                <span class="text-3xl mb-1">🎨</span><span class="text-sm sm:text-lg text-center">تحدي الألوان</span>
+            <button onclick="startGame(2)" class="flex flex-col items-center justify-center bg-red-400 hover:bg-red-500 text-white font-bold py-3 rounded-2xl shadow border-b-4 border-red-600 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">🎨</span><span class="text-sm sm:text-base text-center">اختيار اللون</span>
             </button>
-            <button onclick="startGame(3)" class="flex flex-col items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-bold py-4 rounded-3xl shadow-lg border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all">
-                <span class="text-3xl mb-1">🔢</span><span class="text-sm sm:text-lg text-center">مد الرقم</span>
+            <button onclick="startGame(3)" class="flex flex-col items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-bold py-3 rounded-2xl shadow border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">🔢</span><span class="text-sm sm:text-base text-center">مد الرقم</span>
             </button>
-            <button onclick="startGame(4)" class="flex flex-col items-center justify-center bg-green-400 hover:bg-green-500 text-purple-900 font-bold py-4 rounded-3xl shadow-lg border-b-8 border-green-600 active:border-b-0 active:translate-y-2 transition-all">
-                <span class="text-3xl mb-1">➕</span><span class="text-sm sm:text-lg text-center">تحدي الجمع</span>
+            <button onclick="startGame(4)" class="flex flex-col items-center justify-center bg-green-400 hover:bg-green-500 text-purple-900 font-bold py-3 rounded-2xl shadow border-b-4 border-green-600 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">➕</span><span class="text-sm sm:text-base text-center">تحدي الجمع</span>
             </button>
-            <button onclick="startGame(5)" class="flex flex-col items-center justify-center bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 rounded-3xl shadow-lg border-b-8 border-purple-700 active:border-b-0 active:translate-y-2 transition-all">
-                <span class="text-3xl mb-1">🧩</span><span class="text-sm sm:text-lg text-center">الحرف الناقص</span>
+            <button onclick="startGame(5)" class="flex flex-col items-center justify-center bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 rounded-2xl shadow border-b-4 border-purple-700 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">🧩</span><span class="text-sm sm:text-base text-center">الحرف الناقص</span>
             </button>
-            <button onclick="startGame(6)" class="flex flex-col items-center justify-center bg-blue-400 hover:bg-blue-500 text-white font-bold py-4 rounded-3xl shadow-lg border-b-8 border-blue-600 active:border-b-0 active:translate-y-2 transition-all">
-                <span class="text-3xl mb-1">🔠</span><span class="text-sm sm:text-lg text-center">ترتيب الحروف</span>
+            <button onclick="startGame(6)" class="flex flex-col items-center justify-center bg-blue-400 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl shadow border-b-4 border-blue-600 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">🔠</span><span class="text-sm sm:text-base text-center">ترتيب الحروف</span>
+            </button>
+            <button onclick="startGame(7)" class="flex flex-col items-center justify-center bg-orange-400 hover:bg-orange-500 text-white font-bold py-3 rounded-2xl shadow border-b-4 border-orange-600 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">🧠</span><span class="text-sm sm:text-base text-center">لعبة الذاكرة</span>
+            </button>
+            <button onclick="startGame(8)" class="flex flex-col items-center justify-center bg-teal-400 hover:bg-teal-500 text-white font-bold py-3 rounded-2xl shadow border-b-4 border-teal-600 active:border-b-0 active:translate-y-1 transition-all">
+                <span class="text-3xl sm:text-4xl mb-1">🗺️</span><span class="text-sm sm:text-base text-center">المتاهة</span>
             </button>
         </div>
     </div>
@@ -90,66 +97,63 @@
     <!-- شاشة اللعب -->
     <div id="game-screen" class="hidden flex-1 flex flex-col h-full w-full">
         <!-- الشريط العلوي -->
-        <div class="h-14 sm:h-16 bg-purple-600 text-white flex items-center justify-between px-3 shadow-md z-30 rounded-b-3xl shrink-0">
+        <div class="h-14 sm:h-16 bg-purple-600 text-white flex items-center justify-between px-3 shadow-md z-30 rounded-b-2xl shrink-0">
             <button onclick="showMenu()" class="text-xl sm:text-2xl bg-purple-800 w-10 h-10 rounded-full flex items-center justify-center shadow-inner active:scale-90 transition-transform">🔙</button>
-            
-            <div class="flex-1 flex justify-center items-center gap-1 px-1 text-center">
-                <span class="text-yellow-300 text-lg sm:text-xl drop-shadow-md font-bold">⭐ <span id="stars-count">0</span></span>
+            <div class="flex-1 flex justify-center items-center px-1 text-center">
+                <span class="text-yellow-300 text-base sm:text-xl font-bold drop-shadow-md">⭐ <span id="stars-count">0</span></span>
             </div>
-
             <div class="text-center flex-1">
                 <h2 id="header-title" class="text-xs sm:text-sm font-bold truncate">التحدي</h2>
                 <p id="header-level" class="text-[10px] sm:text-xs text-yellow-300 font-bold tracking-wider">مرحلة 1</p>
             </div>
-
-            <div id="lives-container" class="text-lg sm:text-xl flex space-x-1 rtl:space-x-reverse min-w-[60px] justify-end">❤️❤️❤️</div>
+            <div id="lives-container" class="text-base sm:text-xl flex space-x-1 rtl:space-x-reverse min-w-[70px] justify-end transition-opacity">❤️❤️❤️</div>
         </div>
 
-        <!-- منطقة التحدي (بدون سكرول) -->
-        <div id="game-area" class="flex-1 relative w-full overflow-hidden flex flex-col min-h-0">
+        <!-- منطقة التحدي -->
+        <div id="game-area" class="flex-1 relative w-full overflow-hidden flex flex-col min-h-0 bg-[#fce7f3]">
             <canvas id="lines-canvas"></canvas>
-            <div id="game-content" class="absolute inset-0 p-2 flex flex-col">
-                <!-- محتوى اللعبة يولد هنا -->
+            <canvas id="maze-canvas" class="hidden"></canvas>
+            <div id="game-content" class="absolute inset-0 p-2 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300">
+                <!-- المحتوى يولد هنا -->
             </div>
         </div>
     </div>
 
-    <!-- نافذة منبثقة (إظهار الإجابة الصحيحة - شباك منفرد) -->
-    <div id="answer-overlay" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl pop border-8 border-green-400 flex flex-col gap-4 max-h-[90vh] overflow-hidden">
-            <h2 class="text-3xl font-black text-green-600">الإجابة الصحيحة! 💡</h2>
-            <p class="text-gray-600 font-bold">تعلمي الصح يا بطلة قبل ما تعيدي المحاولة</p>
+    <!-- نافذة الإجابة الصحيحة قبل الإعادة (شباك منفرد) -->
+    <div id="answer-overlay" class="hidden fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-3 backdrop-blur-md">
+        <div class="bg-white rounded-3xl p-5 w-full max-w-sm text-center shadow-2xl pop border-8 border-green-400 flex flex-col gap-4 max-h-[90vh]">
+            <h2 class="text-2xl sm:text-3xl font-black text-green-600">الإجابة الصح! 💡</h2>
+            <p class="text-gray-600 font-bold text-sm sm:text-base">تعلميها يا بطلة قبل الإعادة</p>
             
-            <!-- محتوى الإجابة -->
-            <div id="answer-details" class="flex-1 flex flex-col gap-2 overflow-y-auto my-2 text-2xl font-bold text-purple-800 bg-purple-50 p-4 rounded-xl border border-purple-200 justify-center">
-                <!-- الإجابات تولد هنا -->
+            <div id="answer-details" class="flex-1 overflow-y-auto my-2 text-xl font-bold text-purple-800 bg-purple-50 p-4 rounded-xl border border-purple-200 flex flex-col justify-center gap-3">
+                <!-- تفاصيل الإجابة -->
             </div>
 
-            <button onclick="retryCurrentChallenge()" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-3 rounded-2xl shadow-lg border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2">
-                <span>إعادة المحاولة نفس التحدي</span> <span>🔄</span>
+            <button onclick="retryCurrentChallenge()" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-lg sm:text-xl font-bold py-4 rounded-2xl shadow-lg border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2 shrink-0">
+                <span>إعادة نفس السؤال</span> <span class="text-2xl">🔄</span>
             </button>
         </div>
     </div>
 
-    <!-- نافذة منبثقة (للفوز أو الخسارة النهائية) -->
+    <!-- نافذة الفوز / الشهادة -->
     <div id="overlay" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl pop border-8 border-yellow-400 flex flex-col gap-4">
+        <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl pop border-8 border-yellow-400 flex flex-col gap-5">
             <h2 id="overlay-title" class="text-2xl sm:text-3xl font-black text-purple-700">عنوان</h2>
-            <p id="overlay-msg" class="text-lg text-gray-700 font-bold">رسالة</p>
-            <button id="overlay-save-btn" onclick="shareImage()" class="w-full bg-pink-500 text-white text-lg font-bold py-3 rounded-xl shadow active:translate-y-1 transition-all flex justify-center items-center gap-2">
+            <p id="overlay-msg" class="text-lg font-bold text-gray-700">رسالة</p>
+            <button onclick="shareImage()" class="w-full bg-pink-500 text-white text-lg font-bold py-4 rounded-xl shadow border-b-4 border-pink-700 active:border-b-0 active:translate-y-1 transition-all flex justify-center items-center gap-2">
                 📸 احفظ الصورة (شهادة)
             </button>
-            <button id="overlay-btn" class="w-full bg-purple-600 text-white text-xl font-bold py-3 rounded-xl shadow border-b-4 border-purple-800 active:border-b-0 active:translate-y-1 transition-all">
+            <button onclick="closeWinOverlay()" class="w-full bg-purple-600 text-white text-lg font-bold py-4 rounded-xl shadow border-b-4 border-purple-800 active:border-b-0 active:translate-y-1 transition-all">
                 موافق
             </button>
         </div>
     </div>
 
-    <!-- كانفاس مخفي لرسم الشهادة -->
+    <!-- كانفاس مخفي للشهادة -->
     <canvas id="cert-canvas" width="800" height="1000" style="display:none;"></canvas>
 
     <script>
-        // قاموس الكلمات الشامل
+        // القاموس الشامل
         const fullDict = [
             {w:"بسة", e:"🐱"},{w:"كلب", e:"🐶"},{w:"عصفور", e:"🐦"},{w:"سمكة", e:"🐟"},
             {w:"أرنب", e:"🐰"},{w:"دب", e:"🐻"},{w:"حصان", e:"🐴"},{w:"دجاجة", e:"🐔"},
@@ -185,7 +189,6 @@
             {w:"خرز", e:"📿"},{w:"عقد", e:"📿"}
         ];
 
-        // قاموس الألوان للتحدي الثاني
         const colorsDict = [
             {w:"أحمر", e:"🔴"},{w:"أزرق", e:"🔵"},{w:"أخضر", e:"🟢"},{w:"أصفر", e:"🟡"},
             {w:"وردي", e:"🩷"},{w:"بنفسجي", e:"🟣"},{w:"برتقالي", e:"🟠"},{w:"أسود", e:"⚫"},
@@ -193,35 +196,25 @@
         ];
 
         let state = {
-            challenge: 0,
-            level: 1,
-            stage: 1, 
-            lives: 3,
+            challenge: 0, level: 1, stage: 1, lives: 3,
             stars: parseInt(localStorage.getItem('jawaher_stars') || '0'),
-            usedWords: [],
-            matchesToWin: 0,
-            currentMatches: 0,
-            ttsUnlocked: false,
-            chData: null 
+            usedWords: [], matchesToWin: 0, currentMatches: 0,
+            ttsUnlocked: false, chData: null 
         };
 
         document.getElementById('stars-count').innerText = state.stars;
 
         function addStar() {
-            state.stars++;
-            localStorage.setItem('jawaher_stars', state.stars);
+            state.stars++; localStorage.setItem('jawaher_stars', state.stars);
             document.getElementById('stars-count').innerText = state.stars;
             let el = document.getElementById('stars-count');
-            el.classList.add('pop');
-            setTimeout(() => el.classList.remove('pop'), 400);
+            el.classList.add('pop'); setTimeout(() => el.classList.remove('pop'), 400);
         }
 
-        // تفعيل الصوت
         function initTTS() {
             if ('speechSynthesis' in window && !state.ttsUnlocked) {
                 let msg = new SpeechSynthesisUtterance('');
-                msg.volume = 0;
-                window.speechSynthesis.speak(msg);
+                msg.volume = 0; window.speechSynthesis.speak(msg);
                 state.ttsUnlocked = true;
             }
         }
@@ -230,8 +223,7 @@
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 let msg = new SpeechSynthesisUtterance(text);
-                msg.lang = 'ar-SA';
-                msg.rate = 0.85; 
+                msg.lang = 'ar-SA'; msg.rate = 0.85; 
                 let voices = window.speechSynthesis.getVoices();
                 let arVoice = voices.find(v => v.lang.startsWith('ar'));
                 if (arVoice) msg.voice = arVoice;
@@ -239,32 +231,37 @@
             }
         }
 
-        // إعدادات الكانفاس (رسم الخطوط)
         let canvas = document.getElementById('lines-canvas');
         let ctx = canvas.getContext('2d');
-        let matchedPairs = []; 
-        let isDrawing = false;
-        let startNode = null;
-        let currentTouch = {x: 0, y: 0};
+        let matchedPairs = [], isDrawing = false, startNode = null, currentTouch = {x: 0, y: 0};
+
+        let mazeCanvas = document.getElementById('maze-canvas');
+        let mCtx = mazeCanvas.getContext('2d');
 
         function resizeCanvas() {
             let area = document.getElementById('game-area');
-            canvas.width = area.clientWidth;
-            canvas.height = area.clientHeight;
+            canvas.width = area.clientWidth; canvas.height = area.clientHeight;
+            mazeCanvas.width = area.clientWidth; mazeCanvas.height = area.clientHeight;
+            if(state.challenge === 8 && state.chData) drawMaze();
         }
         window.addEventListener('resize', resizeCanvas);
 
+        // مسؤولة عن رسم الخطوط، وتم تعديلها لتقوم بالمسح الكامل دائماً لتفادي بقاء الشخابيط
         function drawLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            
+            if (state.challenge >= 4 && state.challenge <= 8) {
+                requestAnimationFrame(drawLoop);
+                return;
+            }
+
             ctx.lineCap = "round";
             let rect = document.getElementById('game-area').getBoundingClientRect();
-
             ctx.lineWidth = 6;
+            
             matchedPairs.forEach(pair => {
-                let r1 = pair.el1.getBoundingClientRect();
-                let r2 = pair.el2.getBoundingClientRect();
-                ctx.strokeStyle = "#a855f7"; 
-                ctx.beginPath();
+                let r1 = pair.el1.getBoundingClientRect(), r2 = pair.el2.getBoundingClientRect();
+                ctx.strokeStyle = "#a855f7"; ctx.beginPath();
                 ctx.moveTo(r1.left + r1.width/2 - rect.left, r1.top + r1.height/2 - rect.top);
                 ctx.lineTo(r2.left + r2.width/2 - rect.left, r2.top + r2.height/2 - rect.top);
                 ctx.stroke();
@@ -272,8 +269,7 @@
 
             if (isDrawing && startNode) {
                 let r1 = startNode.getBoundingClientRect();
-                ctx.strokeStyle = "#f472b6"; 
-                ctx.beginPath();
+                ctx.strokeStyle = "#f472b6"; ctx.beginPath();
                 ctx.moveTo(r1.left + r1.width/2 - rect.left, r1.top + r1.height/2 - rect.top);
                 ctx.lineTo(currentTouch.x - rect.left, currentTouch.y - rect.top);
                 ctx.stroke();
@@ -283,71 +279,80 @@
         drawLoop(); 
 
         function showMenu() {
+            isDrawing = false; startNode = null; matchedPairs = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            mCtx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
             document.getElementById('menu-screen').classList.remove('hidden');
             document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('answer-overlay').classList.add('hidden');
+            mazeCanvas.classList.add('hidden');
+            document.getElementById('game-content').classList.remove('pointer-events-none');
         }
 
         function startGame(ch) {
-            initTTS();
-            speak('يلا نلعب يا جواهر'); 
-            state.challenge = ch;
-            state.level = 1;
-            state.stage = 1;
-            state.lives = 3;
-            state.usedWords = [];
+            initTTS(); speak('يلا نلعب يا جواهر'); 
+            isDrawing = false; startNode = null; matchedPairs = []; state.chData = null;
+            
+            state.challenge = ch; state.level = 1; state.stage = 1; state.lives = 3; state.usedWords = [];
             
             document.getElementById('menu-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
-            setTimeout(() => {
-                resizeCanvas();
-                generateAndRenderChallenge();
-            }, 50);
+            
+            // إخفاء القلوب في الذاكرة (عشان ما تخسر فجأة وهي تلعب)
+            let livesCont = document.getElementById('lives-container');
+            livesCont.style.opacity = (ch === 7) ? '0' : '1';
+            
+            if (ch === 8) {
+                mazeCanvas.classList.remove('hidden');
+                document.getElementById('game-content').classList.add('pointer-events-none');
+            } else {
+                mazeCanvas.classList.add('hidden');
+                document.getElementById('game-content').classList.remove('pointer-events-none');
+            }
+
+            setTimeout(() => { resizeCanvas(); generateAndRenderChallenge(); }, 50);
         }
 
         function updateHeader() {
             let lvlTxt = `مستوى ${state.level}`;
-            if(state.challenge === 4 || state.challenge === 5 || state.challenge === 6) lvlTxt = `مرحلة ${state.stage}`;
+            if(state.challenge >= 4 && state.challenge <= 6) lvlTxt = `مرحلة ${state.stage}`;
+            if(state.challenge === 7) lvlTxt = `لعبة الذاكرة`; 
+            if(state.challenge === 8) lvlTxt = `مستوى ${state.level}`; 
             document.getElementById('header-level').innerText = lvlTxt;
             
-            const titles = ["", "مد الحرف", "اختيار اللون", "مد الرقم", "تحدي الجمع", "الحرف الناقص", "ترتيب الحروف"];
+            const titles = ["", "مد الحرف", "اختيار اللون", "مد الرقم", "تحدي الجمع", "الحرف الناقص", "ترتيب الحروف", "لعبة الذاكرة", "المتاهة"];
             document.getElementById('header-title').innerText = titles[state.challenge];
             updateLivesDisplay();
         }
 
         function updateLivesDisplay() {
+            if(state.challenge === 7) return;
             let hearts = '';
             for(let i=0; i<3; i++) hearts += i < state.lives ? '❤️' : '🖤';
             document.getElementById('lives-container').innerText = hearts;
         }
 
-        // يفصل بين توليد البيانات (Generate) وبين الرسم (Render) عشان الإعادة
         function generateAndRenderChallenge() {
-            matchedPairs = []; 
-            document.getElementById('game-content').innerHTML = '';
-            updateHeader();
-
-            if (state.challenge === 1) genCh1();
-            else if (state.challenge === 2) genCh2();
-            else if (state.challenge === 3) genCh3();
-            else if (state.challenge === 4) genCh4();
-            else if (state.challenge === 5) genCh5();
-            else if (state.challenge === 6) genCh6();
+            matchedPairs = []; document.getElementById('game-content').innerHTML = ''; updateHeader();
+            if (state.challenge === 1) genCh1(); else if (state.challenge === 2) genCh2();
+            else if (state.challenge === 3) genCh3(); else if (state.challenge === 4) genCh4();
+            else if (state.challenge === 5) genCh5(); else if (state.challenge === 6) genCh6();
+            else if (state.challenge === 7) genCh7(); else if (state.challenge === 8) genCh8();
         }
 
-        // دالة إعادة المحاولة لنفس التحدي
         function retryCurrentChallenge() {
             document.getElementById('answer-overlay').classList.add('hidden');
-            state.lives = 3;
-            matchedPairs = [];
-            document.getElementById('game-content').innerHTML = '';
+            state.lives = 3; matchedPairs = []; document.getElementById('game-content').innerHTML = '';
             updateHeader();
             
-            if (state.challenge === 1) renderCh1UI();
-            else if (state.challenge === 2) renderCh2UI();
-            else if (state.challenge === 3) renderCh3UI();
-            else if (state.challenge === 4) renderCh4UI();
-            else if (state.challenge === 5) renderCh5UI();
-            else if (state.challenge === 6) renderCh6UI();
+            // إعادة نفس المرحلة بنفس البيانات المخزنة
+            if (state.challenge === 1) renderCh1UI(); else if (state.challenge === 2) renderCh2UI();
+            else if (state.challenge === 3) renderCh3UI(); else if (state.challenge === 4) renderCh4UI();
+            else if (state.challenge === 5) renderCh5UI(); else if (state.challenge === 6) {
+                state.chData.selected = []; state.chData.scrambled.forEach(s => s.used = false); renderCh6UI();
+            } else if (state.challenge === 8) {
+                state.chData.userPath = []; state.chData.isDrawing = false; drawMaze();
+            }
         }
 
         function shuffle(array) {
@@ -357,73 +362,58 @@
             }
         }
 
-        // ============================================
-        // نظام الخطأ والإجابة الصحيحة
-        // ============================================
+        // نظام الخطأ
         function handleWrong() {
-            speak('حاولي مرة ثانية يا بطلة');
-            state.lives--;
-            updateLivesDisplay();
-            let area = document.getElementById('game-area');
-            area.classList.add('shake');
-            setTimeout(() => area.classList.remove('shake'), 500);
+            // تجاهل القلوب في لعبة الذاكرة للسماح بالاستمرارية
+            if (state.challenge === 7) return;
 
-            if(state.lives <= 0) {
-                showAnswerOverlay();
-            }
+            speak('حاولي مرة ثانية يا بطلة');
+            state.lives--; updateLivesDisplay();
+            let area = document.getElementById('game-area');
+            area.classList.add('shake'); setTimeout(() => area.classList.remove('shake'), 500);
+
+            if(state.lives <= 0) showAnswerOverlay();
         }
 
         function showAnswerOverlay() {
             speak('شوفي الإجابة الصح عشان نتعلم');
-            let detailsHtml = '';
+            let dHtml = ''; let d = state.chData;
 
-            if (state.challenge === 1) {
-                detailsHtml = state.chData.selected.map(s => `<div class="flex items-center justify-center gap-4 border-b border-purple-200 pb-2"><span>${s.w.charAt(0)}</span> <span class="text-sm">➡️</span> <span class="text-3xl">${s.e}</span></div>`).join('');
-            } 
-            else if (state.challenge === 2) {
-                detailsHtml = state.chData.selected.map(s => `<div class="flex items-center justify-center gap-4 border-b border-purple-200 pb-2"><span>${s.w}</span> <span class="text-sm">➡️</span> <span class="text-3xl">${s.e}</span></div>`).join('');
+            if (state.challenge === 1 || state.challenge === 2) {
+                dHtml = d.selected.map(s => `<div class="flex justify-center items-center gap-4 border-b border-purple-100 py-1"><span>${s.w}</span> <span class="text-sm">⬅️</span> <span class="text-4xl">${s.e}</span></div>`).join('');
+            } else if (state.challenge === 3) {
+                dHtml = d.selected.map(s => `<div class="flex justify-center items-center gap-4 border-b border-purple-100 py-1"><span>${s.num}</span> <span class="text-sm">⬅️</span> <span class="text-2xl flex flex-wrap justify-center w-28">${s.emojiHtml}</span></div>`).join('');
+            } else if (state.challenge === 4) {
+                dHtml = `<div class="text-5xl font-black text-pink-600 mt-4">${d.a} + ${d.b} = ${d.ans}</div>`;
+            } else if (state.challenge === 5 || state.challenge === 6) {
+                dHtml = `<div class="text-7xl mb-4 mt-2">${d.emoji}</div><div class="text-4xl font-black text-pink-600">${d.word}</div>`;
+            } else if (state.challenge === 8) {
+                dHtml = `<div class="text-2xl font-bold mb-6 mt-2">الهدف الصحيح كان:</div>
+                         <div class="text-7xl animate-bounce mb-4">${d.correctTarget.e}</div>
+                         <div class="text-2xl text-purple-700">${d.correctTarget.text || ''}</div>`;
             }
-            else if (state.challenge === 3) {
-                detailsHtml = state.chData.selected.map(s => `<div class="flex items-center justify-center gap-4 border-b border-purple-200 pb-2"><span>${s.num}</span> <span class="text-sm">➡️</span> <span class="text-xl flex flex-wrap max-w-[150px] justify-center">${s.emojiHtml}</span></div>`).join('');
-            }
-            else if (state.challenge === 4) {
-                detailsHtml = `<div class="text-4xl font-black text-pink-500">${state.chData.a} + ${state.chData.b} = ${state.chData.ans}</div>`;
-            }
-            else if (state.challenge === 5 || state.challenge === 6) {
-                detailsHtml = `<div class="text-6xl mb-2">${state.chData.emoji}</div><div class="text-5xl font-black text-pink-500">${state.chData.word}</div>`;
-            }
-
-            document.getElementById('answer-details').innerHTML = detailsHtml;
+            document.getElementById('answer-details').innerHTML = dHtml;
             document.getElementById('answer-overlay').classList.remove('hidden');
         }
 
-        // ============================================
-        // نظام الفوز والشهادة
-        // ============================================
         function winLevel() {
-            addStar();
-            speak('ممتاز يا شطورة');
-            
-            if(state.challenge === 1 || state.challenge === 2 || state.challenge === 3) {
-                if(state.level >= 5) {
-                    showFinalWin(`يا عيني على الشطارة! خلصتي التحدي وجمعتي ${state.stars} نجمة!`);
-                } else {
-                    state.level++;
-                    generateAndRenderChallenge();
-                }
-            } 
-            else if (state.challenge === 4) {
+            addStar(); speak('ممتاز يا بطلة');
+            if(state.challenge >= 1 && state.challenge <= 3) {
+                if(state.level >= 5) showFinalWin(`يا عيني! خلصتي التحدي وجمعتي ${state.stars} نجمة!`);
+                else { state.level++; generateAndRenderChallenge(); }
+            } else if (state.challenge === 4) {
                 if(state.stage >= 10) {
                     if(state.level >= 3) showFinalWin('أنهيتي كل تحديات الجمع!');
                     else { state.level++; state.stage = 1; generateAndRenderChallenge(); }
-                } else {
-                    state.stage++;
-                    generateAndRenderChallenge();
-                }
-            }
-            else { // 5 و 6
+                } else { state.stage++; generateAndRenderChallenge(); }
+            } else if (state.challenge === 5 || state.challenge === 6) {
                 if(state.stage >= 16) showFinalWin('ختمتي التحدي بامتياز يا بطلة!');
                 else { state.stage++; generateAndRenderChallenge(); }
+            } else if (state.challenge === 7) {
+                showFinalWin('بطلة الذاكرة القوية! 🎉');
+            } else if (state.challenge === 8) {
+                if(state.level >= 3) showFinalWin('أنهيتي كل المتاهات بذكاء! 🎉');
+                else { state.level++; generateAndRenderChallenge(); }
             }
         }
 
@@ -432,417 +422,548 @@
             document.getElementById('overlay-title').innerText = "شهادة فوز بطلة! 🎉";
             document.getElementById('overlay-msg').innerText = msg;
             state.overlayData = { title: "شهادة فوز بطلة!", msg: msg };
-            
-            let btn = document.getElementById('overlay-btn');
-            btn.onclick = () => { overlay.classList.add('hidden'); showMenu(); };
             overlay.classList.remove('hidden');
         }
+        function closeWinOverlay() {
+            document.getElementById('overlay').classList.add('hidden'); showMenu();
+        }
 
+        // حفظ الصورة
         async function shareImage() {
-            const cvs = document.getElementById('cert-canvas');
-            const c = cvs.getContext('2d');
-            
-            c.fillStyle = '#fce7f3'; 
-            c.fillRect(0, 0, 800, 1000);
-            
-            c.strokeStyle = '#ec4899';
-            c.lineWidth = 25;
-            c.strokeRect(25, 25, 750, 950);
-            
-            c.strokeStyle = '#fff';
-            c.lineWidth = 10;
-            c.strokeRect(50, 50, 700, 900);
-
-            c.textAlign = 'center';
-            c.fillStyle = '#7e22ce'; 
-            c.font = 'bold 70px Cairo, sans-serif';
-            c.fillText('🌟 تطبيق جواهر 🌟', 400, 160);
-
-            c.font = 'bold 90px Cairo, sans-serif';
-            c.fillStyle = '#db2777';
-            c.fillText(state.overlayData.title, 400, 380);
-
-            c.font = 'bold 50px Cairo, sans-serif';
-            c.fillStyle = '#374151';
-            
-            let words = state.overlayData.msg.split(' ');
-            let line = '';
-            let y = 520;
-            for(let i = 0; i < words.length; i++) {
-                let testLine = line + words[i] + ' ';
-                if(c.measureText(testLine).width > 600 && i > 0) {
-                    c.fillText(line, 400, y);
-                    line = words[i] + ' ';
-                    y += 70;
-                } else {
-                    line = testLine;
-                }
+            const cvs = document.getElementById('cert-canvas'); const c = cvs.getContext('2d');
+            c.fillStyle = '#fce7f3'; c.fillRect(0, 0, 800, 1000);
+            c.strokeStyle = '#ec4899'; c.lineWidth = 25; c.strokeRect(25, 25, 750, 950);
+            c.strokeStyle = '#fff'; c.lineWidth = 10; c.strokeRect(50, 50, 700, 900);
+            c.textAlign = 'center'; c.fillStyle = '#7e22ce'; 
+            c.font = 'bold 65px Cairo, sans-serif'; c.fillText('🌟 تطبيق جواهر 🌟', 400, 150);
+            c.font = 'bold 85px Cairo, sans-serif'; c.fillStyle = '#db2777'; c.fillText(state.overlayData.title, 400, 360);
+            c.font = 'bold 45px Cairo, sans-serif'; c.fillStyle = '#374151';
+            let words = state.overlayData.msg.split(' '), line = '', y = 500;
+            for(let i=0; i<words.length; i++) {
+                let test = line + words[i] + ' ';
+                if(c.measureText(test).width > 600 && i > 0) { c.fillText(line, 400, y); line = words[i]+' '; y+=65; }
+                else line = test;
             }
             c.fillText(line, 400, y);
-
-            c.font = 'bold 60px Cairo, sans-serif';
-            c.fillStyle = '#eab308';
-            c.fillText('إجمالي النجوم: ⭐ ' + state.stars, 400, y + 120);
-
-            c.font = '60px Arial';
-            c.fillText('👱‍♀️ 🍍 💄 🥭 👗', 400, 900);
-
+            c.fillStyle = '#eab308'; c.fillText('إجمالي النجوم: ⭐ ' + state.stars, 400, y + 120);
+            c.font = '60px Arial'; c.fillText('👱‍♀️ 🍍 💄 🥭 👗', 400, 900);
             try {
-                const dataUrl = cvs.toDataURL('image/png');
-                const blob = await (await fetch(dataUrl)).blob();
+                const dataUrl = cvs.toDataURL('image/png'); const blob = await (await fetch(dataUrl)).blob();
                 const file = new File([blob], 'jawaher_certificate.png', { type: blob.type });
-                
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: 'شهادة جواهر', text: 'شهادة بطلة!' });
+                    await navigator.share({ files: [file], title: 'شهادة جواهر' });
                 } else {
-                    const link = document.createElement('a');
-                    link.download = 'jawaher_certificate.png';
-                    link.href = dataUrl;
-                    link.click();
+                    const link = document.createElement('a'); link.download = 'jawaher.png'; link.href = dataUrl; link.click();
                 }
             } catch (err) { console.log(err); }
         }
 
-        // ============================================
-        // نظام السحب للتحديات (1, 2, 3)
-        // ============================================
+        // السحب للخطوط (أضيفت touchcancel للمزيد من الثبات)
         function bindDragEvents() {
-            const draggables = document.querySelectorAll('.draggable');
-            draggables.forEach(el => {
+            document.querySelectorAll('.draggable').forEach(el => {
+                el.style.pointerEvents = 'auto'; 
                 el.addEventListener('touchstart', onPointerDown, {passive: false});
                 el.addEventListener('mousedown', onPointerDown, {passive: false});
             });
         }
         function onPointerDown(e) {
-            e.preventDefault();
-            if(e.target.classList.contains('matched')) return;
-
+            if(state.challenge > 3) return;
+            e.preventDefault(); if(e.target.classList.contains('matched')) return;
             startNode = e.target.closest('.draggable');
-            if (startNode) {
-                let val = startNode.dataset.val;
-                if(val) speak(val);
-            }
-            isDrawing = true;
-            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            currentTouch = {x: clientX, y: clientY};
+            if (startNode && startNode.dataset.val) speak(startNode.dataset.val);
+            isDrawing = true; currentTouch = {x: e.touches ? e.touches[0].clientX : e.clientX, y: e.touches ? e.touches[0].clientY : e.clientY};
         }
-        window.addEventListener('touchmove', (e) => {
-            if (!isDrawing) return;
-            e.preventDefault();
-            currentTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-        }, {passive: false});
-        window.addEventListener('mousemove', (e) => {
-            if (!isDrawing) return;
-            currentTouch = {x: e.clientX, y: e.clientY};
-        });
-        window.addEventListener('touchend', (e) => {
-            if (!isDrawing) return;
-            handlePointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        });
-        window.addEventListener('mouseup', (e) => {
-            if (!isDrawing) return;
-            handlePointerUp(e.clientX, e.clientY);
-        });
+        window.addEventListener('touchmove', (e) => { if (isDrawing && state.challenge <= 3) { e.preventDefault(); currentTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY}; } }, {passive: false});
+        window.addEventListener('mousemove', (e) => { if (isDrawing && state.challenge <= 3) currentTouch = {x: e.clientX, y: e.clientY}; });
+        window.addEventListener('touchend', (e) => { if (isDrawing && state.challenge <= 3) handlePointerUp(e.changedTouches ? e.changedTouches[0].clientX : 0, e.changedTouches ? e.changedTouches[0].clientY : 0); });
+        window.addEventListener('touchcancel', (e) => { if (isDrawing && state.challenge <= 3) { isDrawing = false; startNode = null; } });
+        window.addEventListener('mouseup', (e) => { if (isDrawing && state.challenge <= 3) handlePointerUp(e.clientX, e.clientY); });
         function handlePointerUp(x, y) {
-            isDrawing = false;
-            canvas.style.display = 'none';
-            let endNodeRaw = document.elementFromPoint(x, y);
-            canvas.style.display = 'block';
-
+            if(!isDrawing) return;
+            isDrawing = false; canvas.style.display = 'none'; let endNodeRaw = document.elementFromPoint(x, y); canvas.style.display = 'block';
             if (!endNodeRaw) { startNode = null; return; }
             let endNode = endNodeRaw.closest('.draggable');
-
             if (endNode && endNode !== startNode && !endNode.classList.contains('matched')) {
                 if(startNode.dataset.type !== endNode.dataset.type && startNode.dataset.id === endNode.dataset.id) {
-                    speak('شاطرة');
-                    matchedPairs.push({el1: startNode, el2: endNode});
-                    startNode.classList.add('matched', 'bg-green-200');
-                    endNode.classList.add('matched', 'bg-green-200');
-                    state.currentMatches++;
-                    if(state.currentMatches === state.matchesToWin) setTimeout(winLevel, 500);
-                } else {
-                    handleWrong();
-                }
+                    speak('شاطرة'); matchedPairs.push({el1: startNode, el2: endNode});
+                    startNode.classList.add('matched', 'bg-green-200'); endNode.classList.add('matched', 'bg-green-200');
+                    state.currentMatches++; if(state.currentMatches === state.matchesToWin) setTimeout(winLevel, 500);
+                } else handleWrong();
             }
             startNode = null;
         }
 
         // ============================================
-        // التحدي 1: مد الحرف للصورة
-        // ============================================
+        // 1: مد الحرف 
         function genCh1() {
-            let available = fullDict.filter(d => !state.usedWords.includes(d.w));
-            shuffle(available);
-            let selected = [];
-            let usedLetters = new Set();
+            let available = fullDict.filter(d => !state.usedWords.includes(d.w)); shuffle(available);
+            let selected = [], usedLetters = new Set();
             for (let item of available) {
-                let firstLetter = item.w.charAt(0);
-                if (!usedLetters.has(firstLetter)) {
-                    selected.push(item);
-                    usedLetters.add(firstLetter);
-                    if (selected.length === 5) break;
-                }
+                if (!usedLetters.has(item.w.charAt(0))) { selected.push(item); usedLetters.add(item.w.charAt(0)); if (selected.length === 5) break; }
             }
             if(selected.length < 5) { state.usedWords = []; return genCh1(); }
             selected.forEach(w => state.usedWords.push(w.w));
-
-            let left = selected.map(item => ({ id: item.w, content: item.w.charAt(0), val: item.w.charAt(0) }));
-            let right = selected.map(item => ({ id: item.w, content: item.e, val: item.w }));
-            shuffle(left); shuffle(right);
-            
-            state.chData = { selected, left, right };
-            renderCh1UI();
+            let left = selected.map(i => ({ id: i.w, content: i.w.charAt(0), val: i.w.charAt(0) }));
+            let right = selected.map(i => ({ id: i.w, content: i.e, val: i.w }));
+            shuffle(left); shuffle(right); state.chData = { selected, left, right }; renderCh1UI();
         }
         function renderCh1UI() {
-            let html = `
-            <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2 pb-2">
-                <div class="flex flex-col justify-evenly h-full w-[30%]">
-                    ${state.chData.left.map(l => `<div class="draggable bg-yellow-400 rounded-2xl w-full aspect-square max-h-[14vh] max-w-[70px] flex items-center justify-center text-3xl font-bold shadow-lg border-4 border-white text-purple-900 mx-auto" data-type="A" data-id="${l.id}" data-val="${l.val}">${l.content}</div>`).join('')}
+            document.getElementById('game-content').innerHTML = `
+            <div class="flex justify-between items-center w-full max-w-sm h-full flex-1 z-20 px-4 pb-2">
+                <div class="flex flex-col justify-between h-full w-[30%] py-2">
+                    ${state.chData.left.map(l => `<div class="draggable bg-yellow-400 rounded-full w-full aspect-square max-h-[11vh] flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-purple-900" data-type="A" data-id="${l.id}" data-val="${l.val}">${l.content}</div>`).join('')}
                 </div>
-                <div class="flex flex-col justify-evenly h-full w-[35%] items-end">
-                    ${state.chData.right.map(r => `<div class="draggable bg-white rounded-3xl w-full aspect-square max-h-[15vh] max-w-[80px] flex items-center justify-center text-4xl shadow-lg border-4 border-pink-400 mx-auto" data-type="B" data-id="${r.id}" data-val="${r.val}">${r.content}</div>`).join('')}
+                <div class="flex flex-col justify-between h-full w-[35%] py-2 items-end">
+                    ${state.chData.right.map(r => `<div class="draggable bg-white rounded-3xl w-full aspect-square max-h-[12vh] flex items-center justify-center text-5xl sm:text-6xl shadow-lg border-4 border-pink-400" data-type="B" data-id="${r.id}" data-val="${r.val}">${r.content}</div>`).join('')}
                 </div>
             </div>`;
-            document.getElementById('game-content').innerHTML = html;
-            state.matchesToWin = 5; state.currentMatches = 0;
-            bindDragEvents();
+            state.matchesToWin = 5; state.currentMatches = 0; bindDragEvents();
         }
 
         // ============================================
-        // التحدي 2: مد اللون
-        // ============================================
+        // 2: اختيار اللون
         function genCh2() {
             let available = colorsDict.filter(d => !state.usedWords.includes(d.w));
             if(available.length < 5) { state.usedWords = []; available = [...colorsDict]; }
-            shuffle(available);
-            let selected = available.slice(0, 5);
-            selected.forEach(w => state.usedWords.push(w.w));
-
-            let left = selected.map(item => ({ id: item.w, content: item.w, val: item.w }));
-            let right = selected.map(item => ({ id: item.w, content: item.e, val: item.w }));
-            shuffle(left); shuffle(right);
-            
-            state.chData = { selected, left, right };
-            renderCh2UI();
+            shuffle(available); let selected = available.slice(0, 5); selected.forEach(w => state.usedWords.push(w.w));
+            let left = selected.map(i => ({ id: i.w, content: i.w, val: i.w }));
+            let right = selected.map(i => ({ id: i.w, content: i.e, val: i.w }));
+            shuffle(left); shuffle(right); state.chData = { selected, left, right }; renderCh2UI();
         }
         function renderCh2UI() {
-            let html = `
-            <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2 pb-2">
-                <div class="flex flex-col justify-evenly h-full w-[45%]">
-                    ${state.chData.left.map(l => `<div class="draggable bg-blue-100 rounded-2xl w-full py-3 flex items-center justify-center text-xl sm:text-2xl font-bold shadow-lg border-4 border-white text-purple-900 mx-auto" data-type="A" data-id="${l.id}" data-val="${l.val}">${l.content}</div>`).join('')}
+            document.getElementById('game-content').innerHTML = `
+            <div class="flex justify-between items-center w-full max-w-sm h-full flex-1 z-20 px-4 pb-2">
+                <div class="flex flex-col justify-between h-full w-[45%] py-2">
+                    ${state.chData.left.map(l => `<div class="draggable bg-blue-100 rounded-2xl w-full py-3 max-h-[10vh] flex items-center justify-center text-xl sm:text-3xl font-bold shadow-lg border-4 border-white text-purple-900" data-type="A" data-id="${l.id}" data-val="${l.val}">${l.content}</div>`).join('')}
                 </div>
-                <div class="flex flex-col justify-evenly h-full w-[30%] items-end">
-                    ${state.chData.right.map(r => `<div class="draggable bg-white rounded-full w-full aspect-square max-h-[12vh] max-w-[70px] flex items-center justify-center text-4xl shadow-lg border-4 border-gray-200 mx-auto" data-type="B" data-id="${r.id}" data-val="${r.val}">${r.content}</div>`).join('')}
+                <div class="flex flex-col justify-between h-full w-[30%] py-2 items-end">
+                    ${state.chData.right.map(r => `<div class="draggable bg-white rounded-full w-full aspect-square max-h-[11vh] flex items-center justify-center text-4xl sm:text-5xl shadow-lg border-4 border-gray-200" data-type="B" data-id="${r.id}" data-val="${r.val}">${r.content}</div>`).join('')}
                 </div>
             </div>`;
-            document.getElementById('game-content').innerHTML = html;
-            state.matchesToWin = 5; state.currentMatches = 0;
-            bindDragEvents();
+            state.matchesToWin = 5; state.currentMatches = 0; bindDragEvents();
         }
 
         // ============================================
-        // التحدي 3: مد الرقم
-        // ============================================
+        // 3: مد الرقم
         function genCh3() {
-            let numbers = [];
-            while(numbers.length < 5) {
-                let r = Math.floor(Math.random() * 8) + 1; 
-                if(!numbers.includes(r)) numbers.push(r);
-            }
-            let selected = numbers.map(n => {
-                let rEmoji = fullDict[Math.floor(Math.random() * fullDict.length)].e;
-                let emojiHtml = Array(n).fill(`<span>${rEmoji}</span>`).join('');
-                return { num: n, emojiHtml };
+            let nums = []; while(nums.length < 5) { let r = Math.floor(Math.random()*8)+1; if(!nums.includes(r)) nums.push(r); }
+            let selected = nums.map(n => {
+                let e = fullDict[Math.floor(Math.random()*fullDict.length)].e;
+                return { num: n, emojiHtml: Array(n).fill(`<span>${e}</span>`).join('') };
             });
-
-            let left = selected.map(item => ({ id: item.num, content: item.num, val: item.num }));
-            let right = selected.map(item => ({ id: item.num, content: `<div class="flex flex-wrap justify-center items-center gap-0.5">${item.emojiHtml}</div>`, val: item.num }));
-            shuffle(left); shuffle(right);
-            
-            state.chData = { selected, left, right };
-            renderCh3UI();
+            let left = selected.map(i => ({ id: i.num, content: i.num, val: i.num }));
+            let right = selected.map(i => ({ id: i.num, content: `<div class="flex flex-wrap justify-center gap-0.5 text-xl sm:text-2xl">${i.emojiHtml}</div>`, val: i.num }));
+            shuffle(left); shuffle(right); state.chData = { selected, left, right }; renderCh3UI();
         }
         function renderCh3UI() {
-            let html = `
-            <div class="flex justify-between items-center w-full h-full flex-1 z-20 pop px-2 pb-2">
-                <div class="flex flex-col justify-evenly h-full w-[25%]">
-                    ${state.chData.left.map(l => `<div class="draggable bg-pink-400 rounded-full w-full aspect-square max-h-[12vh] max-w-[65px] flex items-center justify-center text-2xl font-bold shadow-lg border-4 border-white text-white mx-auto" data-type="A" data-id="${l.id}" data-val="${l.val}">${l.content}</div>`).join('')}
+            document.getElementById('game-content').innerHTML = `
+            <div class="flex justify-between items-center w-full max-w-sm h-full flex-1 z-20 px-4 pb-2">
+                <div class="flex flex-col justify-between h-full w-[25%] py-2">
+                    ${state.chData.left.map(l => `<div class="draggable bg-pink-400 rounded-full w-full aspect-square max-h-[11vh] flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg border-4 border-white text-white" data-type="A" data-id="${l.id}" data-val="${l.val}">${l.content}</div>`).join('')}
                 </div>
-                <div class="flex flex-col justify-evenly h-full w-[60%]">
-                    ${state.chData.right.map(r => `<div class="draggable bg-white rounded-2xl w-full p-2 min-h-[10vh] flex items-center justify-center shadow-lg border-4 border-yellow-400 mx-auto text-xl sm:text-2xl" data-type="B" data-id="${r.id}" data-val="${r.val}">${r.content}</div>`).join('')}
+                <div class="flex flex-col justify-between h-full w-[60%] py-2 items-end">
+                    ${state.chData.right.map(r => `<div class="draggable bg-white rounded-3xl w-full p-3 max-h-[12vh] flex items-center justify-center shadow-lg border-4 border-yellow-400" data-type="B" data-id="${r.id}" data-val="${r.val}">${r.content}</div>`).join('')}
                 </div>
             </div>`;
-            document.getElementById('game-content').innerHTML = html;
-            state.matchesToWin = 5; state.currentMatches = 0;
-            bindDragEvents();
+            state.matchesToWin = 5; state.currentMatches = 0; bindDragEvents();
         }
 
         // ============================================
-        // التحدي 4: تحدي الجمع
-        // ============================================
+        // 4: الجمع (تم إزالة .pop من هنا لعدم القفز)
         function genCh4() {
             let maxTotal = state.level === 1 ? 6 : (state.level === 2 ? 8 : 10);
-            let a = Math.floor(Math.random() * (maxTotal - 1)) + 1;
-            let b = Math.floor(Math.random() * (maxTotal - a)) + 1;
-            let ans = a + b;
-            
-            let e1 = fullDict[Math.floor(Math.random() * fullDict.length)].e;
-            let e2 = fullDict[Math.floor(Math.random() * fullDict.length)].e;
-
-            let options = [ans];
-            while(options.length < 3) {
-                let r = Math.floor(Math.random() * maxTotal) + 1;
-                if(!options.includes(r)) options.push(r);
-            }
-            shuffle(options);
-
-            state.chData = { a, b, ans, e1, e2, options };
-            renderCh4UI();
+            let a = Math.floor(Math.random()*(maxTotal-1))+1, b = Math.floor(Math.random()*(maxTotal-a))+1, ans = a+b;
+            let e1 = fullDict[Math.floor(Math.random()*fullDict.length)].e, e2 = fullDict[Math.floor(Math.random()*fullDict.length)].e;
+            let options = [ans]; while(options.length < 3) { let r = Math.floor(Math.random()*maxTotal)+1; if(!options.includes(r)) options.push(r); }
+            shuffle(options); state.chData = { a, b, ans, e1, e2, options }; renderCh4UI();
         }
         function renderCh4UI() {
-            let str1 = Array(state.chData.a).fill(state.chData.e1).join('');
-            let str2 = Array(state.chData.b).fill(state.chData.e2).join('');
-            let html = `
-            <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-2">
-                <div class="flex flex-col items-center gap-2 bg-white p-4 rounded-3xl shadow-md border-4 border-purple-200 w-full max-w-sm">
-                    <div class="text-3xl sm:text-4xl flex flex-wrap justify-center cursor-pointer" onclick="speak('${state.chData.a}')">${str1}</div>
+            let d = state.chData;
+            document.getElementById('game-content').innerHTML = `
+            <div class="flex flex-col items-center justify-evenly h-full w-full max-w-sm text-center px-4 py-4 pointer-events-auto">
+                <div class="flex flex-col items-center gap-3 bg-white p-4 rounded-3xl shadow-md border-4 border-purple-200 w-full">
+                    <div class="text-4xl sm:text-5xl flex flex-wrap justify-center cursor-pointer" onclick="speak('${d.a}')">${Array(d.a).fill(d.e1).join('')}</div>
                     <div class="text-4xl font-black text-purple-600">➕</div>
-                    <div class="text-3xl sm:text-4xl flex flex-wrap justify-center cursor-pointer" onclick="speak('${state.chData.b}')">${str2}</div>
+                    <div class="text-4xl sm:text-5xl flex flex-wrap justify-center cursor-pointer" onclick="speak('${d.b}')">${Array(d.b).fill(d.e2).join('')}</div>
                 </div>
-                <div class="text-4xl font-black text-pink-500">= ؟</div>
+                <div class="text-5xl font-black text-pink-500">= ؟</div>
                 <div class="flex gap-4 w-full justify-center">
-                    ${state.chData.options.map(opt => `
-                        <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl font-bold w-20 h-20 rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all" data-correct="${opt === state.chData.ans}" onclick="checkCh4Ans(this, ${opt === state.chData.ans}, ${opt})">
-                            ${opt}
-                        </button>
-                    `).join('')}
+                    ${d.options.map(opt => `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-4xl sm:text-5xl font-bold w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shadow-md border-b-6 border-yellow-600 active:translate-y-2 transition-all" onclick="checkCh4Ans(this, ${opt === d.ans}, ${opt})">${opt}</button>`).join('')}
                 </div>
             </div>`;
-            document.getElementById('game-content').innerHTML = html;
         }
-        function checkCh4Ans(btn, isCorrect, val) {
-            speak(val);
-            if(isCorrect) { btn.classList.replace('bg-yellow-400', 'bg-green-400'); setTimeout(winLevel, 400); }
-            else handleWrong();
-        }
+        function checkCh4Ans(btn, isCorrect, val) { speak(val); if(isCorrect) { btn.classList.replace('bg-yellow-400', 'bg-green-400'); setTimeout(winLevel, 400); } else handleWrong(); }
 
         // ============================================
-        // التحدي 5: الحرف الناقص
-        // ============================================
+        // 5: الحرف الناقص
         function genCh5() {
-            let available = fullDict.filter(d => !state.usedWords.includes(d.w) && d.w.length >= 3);
-            if(available.length === 0) { state.usedWords = []; available = fullDict.filter(d => d.w.length >= 3); }
-            let item = available[Math.floor(Math.random() * available.length)];
-            state.usedWords.push(item.w);
-
-            let hideIdx = Math.floor(Math.random() * item.w.length);
-            let hiddenLetter = item.w[hideIdx];
-            let displayWord = item.w.split('');
-            displayWord[hideIdx] = 'ـ_ـ';
-
-            let allLetters = "ابتثجحخدذرزسشصضطظعغفقكلمنهوي";
-            let options = [hiddenLetter];
-            while(options.length < 4) {
-                let r = allLetters[Math.floor(Math.random() * allLetters.length)];
-                if(!options.includes(r)) options.push(r);
-            }
-            shuffle(options);
-            state.chData = { word: item.w, emoji: item.e, hiddenLetter, displayWord, options };
-            renderCh5UI();
+            let avail = fullDict.filter(d => !state.usedWords.includes(d.w) && d.w.length >= 3); if(!avail.length) { state.usedWords=[]; avail=fullDict.filter(d=>d.w.length>=3); }
+            let item = avail[Math.floor(Math.random()*avail.length)]; state.usedWords.push(item.w);
+            let hideIdx = Math.floor(Math.random()*item.w.length), hiddenLetter = item.w[hideIdx], displayWord = item.w.split(''); displayWord[hideIdx] = 'ـ_ـ';
+            let allLetters = "ابتثجحخدذرزسشصضطظعغفقكلمنهوي", options = [hiddenLetter];
+            while(options.length < 4) { let r = allLetters[Math.floor(Math.random()*allLetters.length)]; if(!options.includes(r)) options.push(r); }
+            shuffle(options); state.chData = { word: item.w, emoji: item.e, hiddenLetter, displayWord, options }; renderCh5UI();
         }
         function renderCh5UI() {
-            let html = `
-            <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-4">
-                <div class="text-6xl sm:text-8xl drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${state.chData.word}')">${state.chData.emoji}</div>
-                <div class="text-3xl sm:text-4xl font-black tracking-widest text-white bg-purple-600 px-6 py-4 rounded-3xl shadow-xl border-4 border-yellow-400 w-full max-w-sm">
-                    ${state.chData.displayWord.join('')}
+            let d = state.chData;
+            document.getElementById('game-content').innerHTML = `
+            <div class="flex flex-col items-center justify-evenly h-full w-full max-w-sm text-center px-4 py-4 pointer-events-auto">
+                <div class="text-8xl sm:text-9xl drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${d.word}')">${d.emoji}</div>
+                <div class="text-4xl sm:text-5xl font-black tracking-widest text-white bg-purple-600 px-6 py-5 rounded-3xl shadow-xl border-4 border-yellow-400 w-full">
+                    ${d.displayWord.join('')}
                 </div>
-                <div class="grid grid-cols-2 gap-4 w-full max-w-xs">
-                    ${state.chData.options.map(opt => `
-                        <button class="ans-btn bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl font-bold py-4 rounded-2xl shadow-md border-b-8 border-yellow-600 active:border-b-0 active:translate-y-2 transition-all" data-correct="${opt === state.chData.hiddenLetter}" onclick="checkCh5Ans(this, ${opt === state.chData.hiddenLetter}, '${opt}')">
-                            ${opt}
-                        </button>
-                    `).join('')}
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    ${d.options.map(opt => `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-4xl sm:text-5xl font-bold py-4 rounded-2xl shadow-md border-b-6 border-yellow-600 active:translate-y-2 transition-all" onclick="checkCh5Ans(this, ${opt === d.hiddenLetter}, '${opt}')">${opt}</button>`).join('')}
                 </div>
             </div>`;
-            document.getElementById('game-content').innerHTML = html;
         }
-        function checkCh5Ans(btn, isCorrect, letter) {
-            speak(letter);
-            if(isCorrect) { btn.classList.replace('bg-yellow-400', 'bg-green-400'); setTimeout(winLevel, 400); }
-            else handleWrong();
-        }
+        function checkCh5Ans(btn, isCorrect, letter) { speak(letter); if(isCorrect) { btn.classList.replace('bg-yellow-400', 'bg-green-400'); setTimeout(winLevel, 400); } else handleWrong(); }
 
         // ============================================
-        // التحدي 6: ترتيب الحروف
-        // ============================================
+        // 6: ترتيب الحروف
         function genCh6() {
-            let available = fullDict.filter(d => !state.usedWords.includes(d.w) && d.w.length >= 3 && d.w.length <= 5);
-            if(available.length === 0) { state.usedWords = []; available = fullDict.filter(d => d.w.length >= 3 && d.w.length <= 5); }
-            let item = available[Math.floor(Math.random() * available.length)];
-            state.usedWords.push(item.w);
-
-            let letters = item.w.split('');
-            let scrambled = [...letters];
-            shuffle(scrambled);
-
-            state.chData = {
-                word: item.w, emoji: item.e, letters: letters,
-                scrambled: scrambled.map((char, id) => ({char, id, used: false})),
-                selected: []
-            };
-            renderCh6UI();
+            let avail = fullDict.filter(d => !state.usedWords.includes(d.w) && d.w.length >= 3 && d.w.length <= 5); if(!avail.length) { state.usedWords=[]; avail=fullDict.filter(d=>d.w.length>=3&&d.w.length<=5); }
+            let item = avail[Math.floor(Math.random()*avail.length)]; state.usedWords.push(item.w);
+            let letters = item.w.split(''), scrambled = [...letters]; shuffle(scrambled);
+            state.chData = { word: item.w, emoji: item.e, letters, scrambled: scrambled.map((char, id) => ({char, id, used: false})), selected: [] }; renderCh6UI();
         }
         function renderCh6UI() {
-            let html = `
-            <div class="flex flex-col items-center justify-evenly h-full flex-1 w-full text-center pop px-2">
-                <div class="text-6xl sm:text-8xl drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${state.chData.word}')">${state.chData.emoji}</div>
-                <div class="flex space-x-1 rtl:space-x-reverse justify-center w-full">
-                    ${state.chData.letters.map((_, i) => {
-                        let s = state.chData.selected[i];
-                        return `<div class="ch5-slot w-14 h-14 bg-purple-200 border-4 border-purple-500 rounded-xl flex items-center justify-center text-3xl font-bold text-purple-900 cursor-pointer" onclick="undoCh6Letter(${i})">
-                            ${s ? s.char : ''}
-                        </div>`;
+            let d = state.chData;
+            document.getElementById('game-content').innerHTML = `
+            <div class="flex flex-col items-center justify-evenly h-full w-full max-w-sm text-center px-4 py-4 pointer-events-auto">
+                <div class="text-8xl sm:text-9xl drop-shadow-xl animate-bounce cursor-pointer" onclick="speak('${d.word}')">${d.emoji}</div>
+                <div class="flex space-x-2 rtl:space-x-reverse justify-center w-full">
+                    ${d.letters.map((_, i) => {
+                        let s = d.selected[i];
+                        return `<div class="w-16 h-16 sm:w-20 sm:h-20 bg-purple-200 border-2 border-purple-500 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl font-bold text-purple-900 cursor-pointer" onclick="undoCh6Letter(${i})">${s ? s.char : ''}</div>`;
                     }).join('')}
                 </div>
-                <div class="flex flex-wrap justify-center gap-2 w-full">
-                    ${state.chData.scrambled.map(obj => {
-                        if(obj.used) return `<div class="w-14 h-14 opacity-0"></div>`;
-                        return `<button class="bg-yellow-400 text-purple-900 text-3xl font-bold w-14 h-14 rounded-xl shadow-md border-b-8 border-yellow-600 active:translate-y-2 transition-all" onclick="selectCh6Letter(${obj.id}, '${obj.char}')">
-                            ${obj.char}
-                        </button>`;
+                <div class="flex flex-wrap justify-center gap-3 w-full">
+                    ${d.scrambled.map(obj => {
+                        if(obj.used) return `<div class="w-16 h-16 sm:w-20 sm:h-20 opacity-0"></div>`;
+                        return `<button class="bg-yellow-400 hover:bg-yellow-500 text-purple-900 text-3xl sm:text-4xl font-bold w-16 h-16 sm:w-20 sm:h-20 rounded-2xl shadow-md border-b-6 border-yellow-600 active:translate-y-2 transition-all" onclick="selectCh6Letter(${obj.id}, '${obj.char}')">${obj.char}</button>`;
                     }).join('')}
                 </div>
             </div>`;
-            document.getElementById('game-content').innerHTML = html;
         }
         function selectCh6Letter(id, char) {
-            speak(char);
-            let obj = state.chData.scrambled.find(o => o.id === id);
-            obj.used = true;
-            state.chData.selected.push({id, char});
-            renderCh6UI();
-
+            speak(char); let obj = state.chData.scrambled.find(o => o.id === id); obj.used = true; state.chData.selected.push({id, char}); renderCh6UI();
             if(state.chData.selected.length === state.chData.letters.length) {
-                let formedWord = state.chData.selected.map(s => s.char).join('');
-                if(formedWord === state.chData.word) setTimeout(winLevel, 400);
-                else {
-                    handleWrong();
-                    if(state.lives > 0) { 
-                        state.chData.selected = []; state.chData.scrambled.forEach(o => o.used = false);
-                        setTimeout(renderCh6UI, 600);
-                    }
-                }
+                if(state.chData.selected.map(s => s.char).join('') === state.chData.word) setTimeout(winLevel, 400);
+                else { handleWrong(); if(state.lives>0){ state.chData.selected=[]; state.chData.scrambled.forEach(o=>o.used=false); setTimeout(renderCh6UI, 600); } }
             }
         }
         function undoCh6Letter(index) {
             if(!state.chData.selected[index]) return;
-            let sel = state.chData.selected[index];
-            state.chData.selected.splice(index, 1);
-            state.chData.scrambled.find(o => o.id === sel.id).used = false;
-            speak('رجوع'); renderCh6UI();
+            let sel = state.chData.selected[index]; state.chData.selected.splice(index, 1);
+            state.chData.scrambled.find(o => o.id === sel.id).used = false; speak('رجوع'); renderCh6UI();
         }
+
+        // ============================================
+        // 7: لعبة الذاكرة 3D Flip (تم إزالة المحاولات/القلوب للإستمرارية)
+        function genCh7() {
+            let available = [...fullDict]; shuffle(available);
+            let selected = available.slice(0, 10);
+            let cards = [];
+            selected.forEach((item, index) => {
+                cards.push({ id: index, content: item.e, matchId: index });
+                cards.push({ id: index, content: item.e, matchId: index });
+            });
+            shuffle(cards);
+            state.chData = { cards: cards.map(c => ({...c, flipped: false, matched: false})), firstPick: null, isProcessing: false };
+            renderCh7UI();
+        }
+        function renderCh7UI() {
+            let d = state.chData;
+            document.getElementById('game-content').innerHTML = `
+            <div class="grid grid-cols-4 grid-rows-5 gap-2 w-full h-full max-w-sm mx-auto pb-4 px-2 pointer-events-auto">
+                ${d.cards.map((card, idx) => `
+                    <div class="relative w-full h-full perspective-1000 cursor-pointer" onclick="flipMemCard(${idx})">
+                        <div class="w-full h-full transition-transform duration-500 transform-style-3d ${card.flipped || card.matched ? 'rotate-y-180' : ''}">
+                            <div class="absolute w-full h-full backface-hidden bg-pink-500 rounded-xl border-b-4 border-pink-700 shadow-sm flex items-center justify-center">
+                                <span class="text-3xl text-white opacity-80">❓</span>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 ${card.matched ? 'bg-green-200 border-green-500' : 'bg-white border-purple-300'} rounded-xl border-b-4 shadow-sm flex items-center justify-center">
+                                <span class="text-4xl sm:text-5xl">${card.content}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+        function flipMemCard(idx) {
+            let d = state.chData;
+            if (d.isProcessing || d.cards[idx].flipped || d.cards[idx].matched) return;
+            d.cards[idx].flipped = true; renderCh7UI();
+            if (d.firstPick === null) d.firstPick = idx;
+            else {
+                d.isProcessing = true; let firstIdx = d.firstPick, secondIdx = idx;
+                if (d.cards[firstIdx].matchId === d.cards[secondIdx].matchId) {
+                    setTimeout(() => { speak('شاطرة'); d.cards[firstIdx].matched = true; d.cards[secondIdx].matched = true; d.firstPick = null; d.isProcessing = false; renderCh7UI();
+                        if (d.cards.every(c => c.matched)) setTimeout(winLevel, 500);
+                    }, 600);
+                } else {
+                    // كروت الذاكرة ترجع تنقلب بدون ما تخصم قلوب لضمان استمرارية اللعب
+                    setTimeout(() => { d.cards[firstIdx].flipped = false; d.cards[secondIdx].flipped = false; d.firstPick = null; d.isProcessing = false; renderCh7UI(); }, 1200);
+                }
+            }
+        }
+
+        // ============================================
+        // 8: المتاهة (HTML Canvas - خطوط سوداء 6px مترابطة)
+        function genCh8() {
+            let cols = state.level === 1 ? 4 : (state.level === 2 ? 5 : 6);
+            let rows = state.level === 1 ? 5 : (state.level === 2 ? 7 : 8);
+            
+            let grid = [];
+            for(let c=0; c<cols; c++) {
+                grid[c] = [];
+                for(let r=0; r<rows; r++) grid[c][r] = {c, r, visited: false, walls: {t:true, r:true, b:true, l:true}};
+            }
+            
+            function dig(c, r) {
+                grid[c][r].visited = true;
+                let dirs = [{dc:0,dr:-1,w:'t',ow:'b'}, {dc:1,dr:0,w:'r',ow:'l'}, {dc:0,dr:1,w:'b',ow:'t'}, {dc:-1,dr:0,w:'l',ow:'r'}];
+                shuffle(dirs);
+                for(let dir of dirs) {
+                    let nc = c + dir.dc, nr = r + dir.dr;
+                    if(nc>=0 && nc<cols && nr>=0 && nr<rows && !grid[nc][nr].visited) {
+                        grid[c][r].walls[dir.w] = false;
+                        grid[nc][nr].walls[dir.ow] = false;
+                        dig(nc, nr);
+                    }
+                }
+            }
+            dig(0, 0);
+
+            // حساب المسار الصحيح ووضع الأهداف الخاطئة خارجه لضمان عدم إغلاق الطريق
+            let queue = [{c: 0, r: 0, path: ["0,0"]}];
+            let visitedBFS = Array.from({length: cols}, () => Array(rows).fill(false));
+            visitedBFS[0][0] = true;
+            let furthestCell = {c: 0, r: 0};
+            let maxDist = 0;
+            let paths = {};
+
+            while(queue.length > 0) {
+                let curr = queue.shift();
+                paths[curr.c + ',' + curr.r] = curr.path;
+
+                if(curr.path.length > maxDist) {
+                    maxDist = curr.path.length;
+                    furthestCell = {c: curr.c, r: curr.r};
+                }
+
+                let cell = grid[curr.c][curr.r];
+                let neighbors = [];
+                if(!cell.walls.t) neighbors.push({c: curr.c, r: curr.r-1});
+                if(!cell.walls.r) neighbors.push({c: curr.c+1, r: curr.r});
+                if(!cell.walls.b) neighbors.push({c: curr.c, r: curr.r+1});
+                if(!cell.walls.l) neighbors.push({c: curr.c-1, r: curr.r});
+
+                for(let n of neighbors) {
+                    if(!visitedBFS[n.c][n.r]) {
+                        visitedBFS[n.c][n.r] = true;
+                        queue.push({c: n.c, r: n.r, path: [...curr.path, n.c + ',' + n.r]});
+                    }
+                }
+            }
+
+            let correctPathSet = new Set(paths[furthestCell.c + ',' + furthestCell.r]);
+            
+            let possibleWrong = [];
+            for(let c=0; c<cols; c++) {
+                for(let r=0; r<rows; r++) {
+                    let key = c + ',' + r;
+                    if(!correctPathSet.has(key)) {
+                        possibleWrong.push({c, r});
+                    }
+                }
+            }
+            shuffle(possibleWrong);
+
+            let startCell = {c: 0, r: 0};
+            let correctEnd = furthestCell;
+            let wrong1End = possibleWrong[0] || {c: cols-1, r: 0};
+            let wrong2End = possibleWrong[1] || {c: 0, r: rows-1};
+
+            let mode = Math.floor(Math.random() * 4);
+            let startTarget, correctTarget, w1, w2;
+            
+            if(mode === 0 || mode === 1) {
+                let avail = [...fullDict]; shuffle(avail);
+                correctTarget = { e: avail[0].e, text: avail[0].w };
+                startTarget = { e: mode===0 ? avail[0].w : avail[0].e };
+                w1 = { e: avail[1].e }; w2 = { e: avail[2].e };
+            } else if(mode === 2) {
+                let n = Math.floor(Math.random()*6)+1;
+                let e = fullDict[Math.floor(Math.random()*fullDict.length)].e;
+                startTarget = { e: n.toString() };
+                correctTarget = { e: Array(n).fill(e).join(''), text: 'العدد الصحيح' };
+                w1 = { e: Array(n+1).fill(e).join('') };
+                w2 = { e: Array(Math.max(1, n-1)).fill(e).join('') };
+            } else {
+                let avail = [...colorsDict]; shuffle(avail);
+                startTarget = { e: avail[0].e }; 
+                correctTarget = { e: avail[0].w, text: avail[0].w }; 
+                w1 = { e: avail[1].w }; w2 = { e: avail[2].w };
+            }
+
+            state.chData = {
+                cols, rows, grid, mode,
+                startTarget, correctTarget, w1, w2,
+                startCell,
+                correctEnd: correctEnd, wrong1End: wrong1End, wrong2End: wrong2End,
+                userPath: [startCell], isDrawing: false
+            };
+            drawMaze();
+        }
+
+        function drawMaze() {
+            if(!state.chData || state.challenge !== 8) return;
+            let d = state.chData;
+            mCtx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+            
+            // إضافة Margin داخلي بسيط للمتاهة
+            let padding = 10;
+            let usableW = mazeCanvas.width - (padding*2);
+            let usableH = mazeCanvas.height - (padding*2) - 80; // رفعها عن القاع شوي
+            
+            // جعل المتاهة في المنتصف
+            let cw = usableW / d.cols;
+            let ch = usableH / d.rows;
+            let offsetX = padding;
+            let offsetY = padding + 40;
+
+            // رسم مسار اللاعب (أصفر شفاف)
+            if(d.userPath.length > 0) {
+                mCtx.beginPath();
+                mCtx.strokeStyle = 'rgba(253, 224, 71, 0.7)'; 
+                mCtx.lineWidth = Math.min(cw, ch) * 0.6;
+                mCtx.lineCap = 'round';
+                mCtx.lineJoin = 'round';
+                
+                let first = d.userPath[0];
+                mCtx.moveTo(offsetX + first.c * cw + cw/2, offsetY + first.r * ch + ch/2);
+                for(let i=1; i<d.userPath.length; i++) {
+                    let p = d.userPath[i];
+                    mCtx.lineTo(offsetX + p.c * cw + cw/2, offsetY + p.r * ch + ch/2);
+                }
+                
+                if(d.isDrawing && currentTouch.x !== 0) {
+                    let rect = mazeCanvas.getBoundingClientRect();
+                    mCtx.lineTo(currentTouch.x - rect.left, currentTouch.y - rect.top);
+                }
+                mCtx.stroke();
+            }
+
+            // رسم الجدران بخطوط سوداء 6px
+            mCtx.beginPath();
+            mCtx.strokeStyle = '#000000';
+            mCtx.lineWidth = 6;
+            mCtx.lineCap = 'round';
+            for(let c=0; c<d.cols; c++) {
+                for(let r=0; r<d.rows; r++) {
+                    let cell = d.grid[c][r];
+                    let x = offsetX + c * cw; let y = offsetY + r * ch;
+                    if(cell.walls.t) { mCtx.moveTo(x, y); mCtx.lineTo(x+cw, y); }
+                    if(cell.walls.r) { mCtx.moveTo(x+cw, y); mCtx.lineTo(x+cw, y+ch); }
+                    if(cell.walls.b) { mCtx.moveTo(x, y+ch); mCtx.lineTo(x+cw, y+ch); }
+                    if(cell.walls.l) { mCtx.moveTo(x, y); mCtx.lineTo(x, y+ch); }
+                }
+            }
+            mCtx.stroke();
+
+            // رسم الأهداف
+            mCtx.textAlign = 'center'; mCtx.textBaseline = 'middle';
+            let fontSize = Math.min(cw, ch) * 0.45;
+            mCtx.font = `bold ${fontSize}px Cairo`;
+            
+            function drawCellContent(cell, text, bg) {
+                let x = offsetX + cell.c * cw + cw/2; let y = offsetY + cell.r * ch + ch/2;
+                mCtx.fillStyle = bg; mCtx.beginPath(); mCtx.arc(x, y, fontSize*1.1, 0, Math.PI*2); mCtx.fill();
+                mCtx.fillStyle = '#000'; mCtx.fillText(text, x, y);
+            }
+
+            drawCellContent(d.startCell, d.startTarget.e, '#bbf7d0'); 
+            drawCellContent(d.correctEnd, d.correctTarget.e, '#fef08a'); 
+            drawCellContent(d.wrong1End, d.w1.e, '#fecaca'); 
+            drawCellContent(d.wrong2End, d.w2.e, '#fecaca'); 
+        }
+
+        mazeCanvas.addEventListener('touchstart', mazeDown, {passive:false});
+        mazeCanvas.addEventListener('touchmove', mazeMove, {passive:false});
+        mazeCanvas.addEventListener('touchend', mazeUp);
+        mazeCanvas.addEventListener('touchcancel', mazeUp);
+        mazeCanvas.addEventListener('mousedown', mazeDown);
+        mazeCanvas.addEventListener('mousemove', mazeMove);
+        mazeCanvas.addEventListener('mouseup', mazeUp);
+
+        function mazeDown(e) {
+            if(state.challenge !== 8 || state.isShowingAnswer) return;
+            e.preventDefault();
+            let rect = mazeCanvas.getBoundingClientRect();
+            let x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            let y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            
+            let d = state.chData;
+            let padding = 10; let usableW = mazeCanvas.width - (padding*2); let usableH = mazeCanvas.height - (padding*2) - 80;
+            let cw = usableW / d.cols; let ch = usableH / d.rows;
+            let offsetX = padding; let offsetY = padding + 40;
+            
+            let c = Math.floor((x - offsetX) / cw); let r = Math.floor((y - offsetY) / ch);
+            
+            if(c === d.startCell.c && r === d.startCell.r) {
+                d.isDrawing = true; d.userPath = [d.startCell]; currentTouch = {x: e.clientX||e.touches[0].clientX, y: e.clientY||e.touches[0].clientY};
+                drawMaze();
+            }
+        }
+
+        function mazeMove(e) {
+            if(!state.chData || !state.chData.isDrawing || state.challenge !== 8) return;
+            e.preventDefault();
+            let rect = mazeCanvas.getBoundingClientRect();
+            currentTouch = {x: e.touches ? e.touches[0].clientX : e.clientX, y: e.touches ? e.touches[0].clientY : e.clientY};
+            let x = currentTouch.x - rect.left; let y = currentTouch.y - rect.top;
+            
+            let d = state.chData;
+            let padding = 10; let usableW = mazeCanvas.width - (padding*2); let usableH = mazeCanvas.height - (padding*2) - 80;
+            let cw = usableW / d.cols; let ch = usableH / d.rows;
+            let offsetX = padding; let offsetY = padding + 40;
+            
+            let c = Math.floor((x - offsetX) / cw); let r = Math.floor((y - offsetY) / ch);
+            
+            if(c>=0 && c<d.cols && r>=0 && r<d.rows) {
+                let last = d.userPath[d.userPath.length-1];
+                if(c !== last.c || r !== last.r) {
+                    let isAdj = (Math.abs(c - last.c) + Math.abs(r - last.r)) === 1;
+                    if(isAdj) {
+                        let cell = d.grid[last.c][last.r];
+                        let hitWall = false;
+                        if(c > last.c && cell.walls.r) hitWall = true;
+                        if(c < last.c && cell.walls.l) hitWall = true;
+                        if(r > last.r && cell.walls.b) hitWall = true;
+                        if(r < last.r && cell.walls.t) hitWall = true;
+                        
+                        if(!hitWall) {
+                            d.userPath.push({c, r});
+                            if(c === d.correctEnd.c && r === d.correctEnd.r) {
+                                d.isDrawing = false; drawMaze(); setTimeout(winLevel, 300);
+                            } else if ((c===d.wrong1End.c && r===d.wrong1End.r) || (c===d.wrong2End.c && r===d.wrong2End.r)) {
+                                d.isDrawing = false; d.userPath=[]; drawMaze(); handleWrong();
+                            }
+                        } else {
+                            d.isDrawing = false; d.userPath=[]; drawMaze(); handleWrong();
+                        }
+                    }
+                }
+            }
+            drawMaze();
+        }
+
+        function mazeUp(e) {
+            if(state.chData && state.chData.isDrawing) { state.chData.isDrawing = false; drawMaze(); }
+        }
+
     </script>
 </body>
 </html>
